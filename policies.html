@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>سياسات المقرر</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -9,119 +10,72 @@
 <div class="container">
   <div class="topbar">
     <div class="brand">سياسات المقرر التدريبي</div>
-    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
-  </div>
-
-  <div class="card" id="adminBox" style="display:none">
-    <div class="h2">إضافة سياسة (للمدرب)</div>
-    <div class="row">
-      <input class="input" id="rule_id" placeholder="رقم القاعدة (اتركه فارغ للجديدة)">
-      <input class="input" id="sort" placeholder="الترتيب (مثال 1)">
-    </div>
-    <div class="row" style="margin-top:10px">
-      <select class="input" id="active">
-        <option value="1">نشط</option>
-        <option value="0">غير نشط</option>
-      </select>
-      <input class="input" id="rule_text" placeholder="نص السياسة">
-    </div>
-    <div class="row" style="margin-top:10px">
-      <button class="btn primary" onclick="savePolicy()">حفظ</button>
-      <button class="btn" onclick="clearForm()">تفريغ</button>
-    </div>
-
-    <div class="h2" style="margin-top:16px">إضافة تذكير (حسب المقرر)</div>
-    <div class="row">
-      <input class="input" id="rem_title" placeholder="عنوان التذكير">
-      <input class="input" id="rem_due" placeholder="وقت الانتهاء (مثال 2026-01-20 12:30)">
-    </div>
-    <div class="row" style="margin-top:10px">
-      <input class="input" id="rem_note" placeholder="ملاحظة التذكير">
-      <button class="btn primary" onclick="addReminder()">إضافة</button>
+    <div class="actions">
+      <a class="btn" href="dashboard.html">رجوع</a>
+      <button class="btn" style="display:none" id="exitAdminBtn" onclick="exitAdmin()">خروج المدرب</button>
     </div>
   </div>
 
   <div class="card">
     <div id="meta" class="muted"></div>
     <div id="list"></div>
+
+    <div id="adminBox" style="display:none; margin-top:14px">
+      <hr style="border:none; border-top:1px solid #e5e7eb; margin:14px 0">
+      <div class="h2">إضافة/تعديل السياسات (للمدرب)</div>
+      <div class="muted">اكتب كل سياسة في سطر مستقل ثم حفظ.</div>
+      <textarea id="polText" class="input" style="height:220px; margin-top:10px"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" onclick="savePolicies()">حفظ السياسات</button>
+      </div>
+      <div id="msg" class="muted" style="margin-top:10px"></div>
+    </div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-  function currentCourse(){
-    if(isAdmin()) return localStorage.getItem("admin_course") || qs("course") || "";
-    const st = getStudent();
-    return st?.course || "";
-  }
+  let CURRENT_COURSE = "";
 
-  function renderRules(rules){
-    if(!rules.length){
+  async function loadPolicies(){
+    const data = await api("policies_get", { course: CURRENT_COURSE });
+    const items = data.items || [];
+    if (!items.length){
       list.innerHTML = `<div class="muted">لا توجد سياسات.</div>`;
       return;
     }
-    list.innerHTML = rules.map(r=>`
-      <div class="rule">
-        <div class="text">${esc(r.rule_text||"")}</div>
-        <div class="muted">#${esc(r.rule_id||"")} | ترتيب: ${esc(r.sort||"0")}</div>
-        ${isAdmin()?`<button class="btn danger" onclick="delPolicy('${esc(r.rule_id)}')">حذف</button>`:""}
+    list.innerHTML = items.map((x,i)=>`
+      <div style="padding:10px 0; border-bottom:1px solid #e5e7eb">
+        <b>${i+1}.</b> ${esc(x.text)}
       </div>
     `).join("");
+    if (isAdmin()){
+      polText.value = items.map(x=>x.text).join("\n");
+    }
+  }
+
+  async function savePolicies(){
+    msg.textContent = "جاري الحفظ...";
+    try{
+      const lines = polText.value.split("\n").map(s=>s.trim()).filter(Boolean);
+      await api("policies_save", { course: CURRENT_COURSE, lines });
+      msg.textContent = "تم الحفظ ✅";
+      await loadPolicies();
+    }catch(e){
+      msg.textContent = "خطأ: " + (e.message||e);
+    }
   }
 
   async function init(){
     requireStudentOrAdmin();
-    const course = currentCourse();
-    if(!course) return alert("لم يتم تحديد المقرر");
+    CURRENT_COURSE = isAdmin()? getAdminCourse() : getSelectedCourse();
+    meta.textContent = `المقرر: ${CURRENT_COURSE||"-"}`;
 
-    if(isAdmin()){
+    if (isAdmin()){
+      exitAdminBtn.style.display="inline-flex";
       adminBox.style.display="block";
-      meta.textContent = `المقرر: ${course} | وضع المدرب`;
-      const d = await api("admin_policies_list",{course_code:course});
-      renderRules(d.rows||[]);
-    }else{
-      meta.textContent = `المقرر: ${course}`;
-      const d = await api("policies_get",{course_code:course});
-      renderRules(d.rules||[]);
     }
-  }
-
-  async function savePolicy(){
-    const course = currentCourse();
-    if(!course) return alert("اختر المقرر أولاً");
-    if(!rule_text.value.trim()) return alert("اكتب نص السياسة");
-    await api("admin_policies_upsert",{
-      course_code:course,
-      rule_id: rule_id.value.trim(),
-      rule_text: rule_text.value.trim(),
-      active: active.value,
-      sort: sort.value.trim() || 0
-    });
-    location.reload();
-  }
-
-  async function delPolicy(id){
-    if(!confirm("تأكيد حذف السياسة؟")) return;
-    await api("admin_policies_delete",{rule_id:id});
-    location.reload();
-  }
-
-  function clearForm(){
-    rule_id.value=""; sort.value=""; active.value="1"; rule_text.value="";
-  }
-
-  async function addReminder(){
-    const course = currentCourse();
-    if(!rem_title.value.trim()) return alert("اكتب عنوان التذكير");
-    if(!rem_due.value.trim()) return alert("اكتب وقت الانتهاء");
-    await api("admin_reminder_add",{
-      course_code:course,
-      title: rem_title.value.trim(),
-      due_at: rem_due.value.trim(),
-      note: rem_note.value.trim()
-    });
-    alert("تمت الإضافة ✅");
-    rem_title.value=""; rem_due.value=""; rem_note.value="";
+    await loadPolicies();
   }
 
   init().catch(e=>alert(e.message||e));

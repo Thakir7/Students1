@@ -25,20 +25,45 @@
         <input id="training_weeks" class="input" placeholder="training_weeks مثال: 16">
         <input id="absence_allowed_pct" class="input" placeholder="absence_allowed_pct مثال: 20">
       </div>
-
-      <div class="row" style="margin-top:10px">
-        <input id="trainer_whatsapp" class="input" placeholder="trainer_whatsapp مثال: 9665...">
-        <input id="trainer_email" class="input" placeholder="trainer_email">
-      </div>
-
       <div style="margin-top:10px">
-        <button class="btn primary" onclick="save()">حفظ الإعدادات</button>
+        <button class="btn primary" onclick="saveSettings()">حفظ الإعدادات</button>
       </div>
 
       <div id="msg" class="msg"></div>
       <div class="muted small" style="margin-top:10px">
-        ملاحظة: لكي تعمل اللوحة لأول مرة ضع في Settings يدويًا: key=admin_pin value=رقمك السري.
+        ملاحظة: أول مرة لازم تضع في Settings يدويًا: key=admin_pin value=رقمك السري. بعد ذلك تستطيع التحكم من هنا.
       </div>
+    </div>
+
+    <div class="card">
+      <div class="h2">إدارة سياسات المقرر</div>
+      <div class="muted">تُحفظ تلقائيًا في تبويب Policies.</div>
+      <hr/>
+
+      <div class="row">
+        <input id="policy_course" class="input" placeholder="course_code (نفس اسم/كود المقرر)">
+        <button class="btn" onclick="loadPolicies()">عرض سياسات المقرر</button>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="row">
+          <input id="rule_id" class="input" placeholder="rule_id (اتركه فارغ للإضافة الجديدة)">
+          <input id="sort" class="input" placeholder="sort مثال: 1">
+        </div>
+        <div class="row" style="margin-top:10px">
+          <select id="active" class="input">
+            <option value="1">نشط</option>
+            <option value="0">غير نشط</option>
+          </select>
+          <input id="rule_text" class="input" placeholder="نص السياسة">
+        </div>
+        <div style="margin-top:10px">
+          <button class="btn primary" onclick="savePolicy()">حفظ/إضافة سياسة</button>
+          <button class="btn" onclick="clearPolicy()">تفريغ الحقول</button>
+        </div>
+      </div>
+
+      <div class="card" id="polList" style="margin-top:12px"></div>
     </div>
   </div>
 
@@ -46,9 +71,16 @@
   <script>
     requireLogin();
 
-    async function save(){
+    async function adminCheck(){
+      const pin = document.getElementById("pin").value.trim();
+      await api("admin_check", { admin_pin: pin });
+      localStorage.setItem("admin_ok","1");
+    }
+
+    async function saveSettings(){
       const msg = document.getElementById("msg");
       msg.className="msg"; msg.textContent="";
+
       try{
         const admin_pin = document.getElementById("pin").value.trim();
         const items = [
@@ -56,16 +88,109 @@
           {key:"contact_hours", value: document.getElementById("contact_hours").value.trim()},
           {key:"training_weeks", value: document.getElementById("training_weeks").value.trim()},
           {key:"absence_allowed_pct", value: document.getElementById("absence_allowed_pct").value.trim()},
-          {key:"trainer_whatsapp", value: document.getElementById("trainer_whatsapp").value.trim()},
-          {key:"trainer_email", value: document.getElementById("trainer_email").value.trim()},
         ];
+
         await api("admin_settings_set", { admin_pin, items });
+        await adminCheck();
+
         msg.className="msg ok";
-        msg.textContent="تم الحفظ بنجاح ✅";
+        msg.textContent="تم حفظ الإعدادات بنجاح ✅";
       }catch(e){
         msg.className="msg err";
         msg.textContent=e.message;
       }
+    }
+
+    async function loadPolicies(){
+      const admin_pin = document.getElementById("pin").value.trim();
+      const course_code = document.getElementById("policy_course").value.trim();
+      const box = document.getElementById("polList");
+      box.innerHTML = "جاري التحميل...";
+
+      try{
+        await api("admin_check", { admin_pin });
+        localStorage.setItem("admin_ok","1");
+
+        const data = await api("admin_policies_list", { admin_pin, course_code });
+        const rows = data.rows || [];
+        if(!rows.length){
+          box.innerHTML = '<div class="muted">لا توجد سياسات لهذا المقرر.</div>';
+          return;
+        }
+
+        box.innerHTML = `
+          <table class="table">
+            <thead><tr><th>rule_id</th><th>sort</th><th>active</th><th>النص</th><th>إجراءات</th></tr></thead>
+            <tbody>
+              ${rows.map(r=>`
+                <tr>
+                  <td>${esc(r.rule_id||"")}</td>
+                  <td>${esc(r.sort||"")}</td>
+                  <td>${esc(r.active||"")}</td>
+                  <td>${esc(r.rule_text||"")}</td>
+                  <td>
+                    <button class="btn" onclick='editPolicy(${JSON.stringify({
+                      rule_id:r.rule_id, sort:r.sort, active:r.active, rule_text:r.rule_text
+                    })})'>تعديل</button>
+                    <button class="btn" onclick='delPolicy("${String(r.rule_id||"").replace(/"/g,"")}")'>حذف</button>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+      }catch(e){
+        box.innerHTML = `<div class="msg err">${e.message}</div>`;
+      }
+    }
+
+    function editPolicy(p){
+      document.getElementById("rule_id").value = p.rule_id || "";
+      document.getElementById("sort").value = p.sort || "";
+      document.getElementById("active").value = String(p.active ?? "1");
+      document.getElementById("rule_text").value = p.rule_text || "";
+    }
+
+    function clearPolicy(){
+      document.getElementById("rule_id").value = "";
+      document.getElementById("sort").value = "";
+      document.getElementById("active").value = "1";
+      document.getElementById("rule_text").value = "";
+    }
+
+    async function savePolicy(){
+      const admin_pin = document.getElementById("pin").value.trim();
+      const course_code = document.getElementById("policy_course").value.trim();
+      const rule_id = document.getElementById("rule_id").value.trim();
+      const sort = document.getElementById("sort").value.trim();
+      const active = document.getElementById("active").value;
+      const rule_text = document.getElementById("rule_text").value.trim();
+
+      if(!course_code) return alert("اكتب course_code للمقرر");
+      if(!rule_text) return alert("اكتب نص السياسة");
+
+      await api("admin_policies_upsert", {
+        admin_pin,
+        course_code,
+        rule_id: rule_id || "",
+        rule_text,
+        active: active,
+        sort: sort || 0
+      });
+
+      clearPolicy();
+      await loadPolicies();
+    }
+
+    async function delPolicy(rule_id){
+      const admin_pin = document.getElementById("pin").value.trim();
+      if(!confirm("تأكيد حذف السياسة؟ (سيتم تعطيلها)")) return;
+      await api("admin_policies_delete", { admin_pin, rule_id });
+      await loadPolicies();
+    }
+
+    function esc(s){
+      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
   </script>
 </body></html>

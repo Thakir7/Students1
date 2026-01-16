@@ -4,35 +4,35 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <link rel="stylesheet" href="assets/style.css"/>
   <title>لوحة المدير</title>
+
+  <script>
+    // حماية الصفحة
+    if (!localStorage.getItem("firebase_token")) {
+      location.href = "admin-login.html";
+    }
+  </script>
 </head>
 <body>
   <div class="container">
     <div class="topbar">
       <a class="btn" href="dashboard.html">رجوع</a>
-      <div class="brand">لوحة المدير</div>
+      <div class="brand">لوحة المدير / المدرب</div>
       <button class="btn" onclick="logout()">خروج</button>
     </div>
 
     <div class="card">
-      <div class="h2">إعدادات عامة</div>
-      <div class="muted">تُحفظ في تبويب Settings (key,value).</div>
+      <div class="h2">إعدادات الغياب</div>
+      <div class="muted">تُحفظ في تبويب Settings (المفتاح/القيمة).</div>
       <hr/>
       <div class="row">
-        <input id="pin" class="input" placeholder="admin_pin (الرقم السري للمدير)">
-        <input id="contact_hours" class="input" placeholder="contact_hours مثال: 4">
+        <input id="contact_hours" class="input" placeholder="ساعات الاتصال contact_hours مثال: 4">
+        <input id="training_weeks" class="input" placeholder="الأسابيع التدريبية training_weeks مثال: 16">
       </div>
       <div class="row" style="margin-top:10px">
-        <input id="training_weeks" class="input" placeholder="training_weeks مثال: 16">
-        <input id="absence_allowed_pct" class="input" placeholder="absence_allowed_pct مثال: 20">
-      </div>
-      <div style="margin-top:10px">
+        <input id="absence_allowed_pct" class="input" placeholder="النسبة المسموحة للغياب absence_allowed_pct مثال: 20">
         <button class="btn primary" onclick="saveSettings()">حفظ الإعدادات</button>
       </div>
-
       <div id="msg" class="msg"></div>
-      <div class="muted small" style="margin-top:10px">
-        ملاحظة: أول مرة لازم تضع في Settings يدويًا: key=admin_pin value=رقمك السري. بعد ذلك تستطيع التحكم من هنا.
-      </div>
     </div>
 
     <div class="card">
@@ -41,14 +41,14 @@
       <hr/>
 
       <div class="row">
-        <input id="policy_course" class="input" placeholder="course_code (نفس اسم/كود المقرر)">
-        <button class="btn" onclick="loadPolicies()">عرض سياسات المقرر</button>
+        <input id="policy_course" class="input" placeholder="كود المقرر (مثال: CIS101 أو نفس اسم المقرر)">
+        <button class="btn" onclick="loadPolicies()">عرض السياسات</button>
       </div>
 
       <div class="card" style="margin-top:12px">
         <div class="row">
-          <input id="rule_id" class="input" placeholder="rule_id (اتركه فارغ للإضافة الجديدة)">
-          <input id="sort" class="input" placeholder="sort مثال: 1">
+          <input id="rule_id" class="input" placeholder="رقم القاعدة (اتركه فارغ للإضافة الجديدة)">
+          <input id="sort" class="input" placeholder="الترتيب sort مثال: 1">
         </div>
         <div class="row" style="margin-top:10px">
           <select id="active" class="input">
@@ -59,7 +59,7 @@
         </div>
         <div style="margin-top:10px">
           <button class="btn primary" onclick="savePolicy()">حفظ/إضافة سياسة</button>
-          <button class="btn" onclick="clearPolicy()">تفريغ الحقول</button>
+          <button class="btn" onclick="clearPolicy()">تفريغ</button>
         </div>
       </div>
 
@@ -71,30 +71,19 @@
   <script>
     requireLogin();
 
-    async function adminCheck(){
-      const pin = document.getElementById("pin").value.trim();
-      await api("admin_check", { admin_pin: pin });
-      localStorage.setItem("admin_ok","1");
-    }
-
     async function saveSettings(){
       const msg = document.getElementById("msg");
       msg.className="msg"; msg.textContent="";
-
       try{
-        const admin_pin = document.getElementById("pin").value.trim();
-        const items = [
-          {key:"admin_pin", value: admin_pin},
-          {key:"contact_hours", value: document.getElementById("contact_hours").value.trim()},
-          {key:"training_weeks", value: document.getElementById("training_weeks").value.trim()},
-          {key:"absence_allowed_pct", value: document.getElementById("absence_allowed_pct").value.trim()},
-        ];
-
-        await api("admin_settings_set", { admin_pin, items });
-        await adminCheck();
-
+        await api("admin_settings_set", {
+          items: [
+            { key:"contact_hours", value: document.getElementById("contact_hours").value.trim() },
+            { key:"training_weeks", value: document.getElementById("training_weeks").value.trim() },
+            { key:"absence_allowed_pct", value: document.getElementById("absence_allowed_pct").value.trim() },
+          ]
+        });
         msg.className="msg ok";
-        msg.textContent="تم حفظ الإعدادات بنجاح ✅";
+        msg.textContent="تم حفظ الإعدادات ✅";
       }catch(e){
         msg.className="msg err";
         msg.textContent=e.message;
@@ -102,17 +91,16 @@
     }
 
     async function loadPolicies(){
-      const admin_pin = document.getElementById("pin").value.trim();
       const course_code = document.getElementById("policy_course").value.trim();
       const box = document.getElementById("polList");
+      if(!course_code) return alert("اكتب كود المقرر");
       box.innerHTML = "جاري التحميل...";
 
       try{
-        await api("admin_check", { admin_pin });
-        localStorage.setItem("admin_ok","1");
-
-        const data = await api("admin_policies_list", { admin_pin, course_code });
+        await api("admin_check", {});
+        const data = await api("admin_policies_list", { course_code });
         const rows = data.rows || [];
+
         if(!rows.length){
           box.innerHTML = '<div class="muted">لا توجد سياسات لهذا المقرر.</div>';
           return;
@@ -120,7 +108,7 @@
 
         box.innerHTML = `
           <table class="table">
-            <thead><tr><th>rule_id</th><th>sort</th><th>active</th><th>النص</th><th>إجراءات</th></tr></thead>
+            <thead><tr><th>رقم القاعدة</th><th>ترتيب</th><th>نشط</th><th>النص</th><th>إجراءات</th></tr></thead>
             <tbody>
               ${rows.map(r=>`
                 <tr>
@@ -129,9 +117,7 @@
                   <td>${esc(r.active||"")}</td>
                   <td>${esc(r.rule_text||"")}</td>
                   <td>
-                    <button class="btn" onclick='editPolicy(${JSON.stringify({
-                      rule_id:r.rule_id, sort:r.sort, active:r.active, rule_text:r.rule_text
-                    })})'>تعديل</button>
+                    <button class="btn" onclick='editPolicy(${JSON.stringify(r)})'>تعديل</button>
                     <button class="btn" onclick='delPolicy("${String(r.rule_id||"").replace(/"/g,"")}")'>حذف</button>
                   </td>
                 </tr>
@@ -140,17 +126,16 @@
           </table>
         `;
       }catch(e){
-        box.innerHTML = `<div class="msg err">${e.message}</div>`;
+        box.innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
       }
     }
 
-    function editPolicy(p){
-      document.getElementById("rule_id").value = p.rule_id || "";
-      document.getElementById("sort").value = p.sort || "";
-      document.getElementById("active").value = String(p.active ?? "1");
-      document.getElementById("rule_text").value = p.rule_text || "";
+    function editPolicy(r){
+      document.getElementById("rule_id").value = r.rule_id || "";
+      document.getElementById("sort").value = r.sort || "";
+      document.getElementById("active").value = String(r.active ?? "1");
+      document.getElementById("rule_text").value = r.rule_text || "";
     }
-
     function clearPolicy(){
       document.getElementById("rule_id").value = "";
       document.getElementById("sort").value = "";
@@ -159,22 +144,20 @@
     }
 
     async function savePolicy(){
-      const admin_pin = document.getElementById("pin").value.trim();
       const course_code = document.getElementById("policy_course").value.trim();
       const rule_id = document.getElementById("rule_id").value.trim();
       const sort = document.getElementById("sort").value.trim();
       const active = document.getElementById("active").value;
       const rule_text = document.getElementById("rule_text").value.trim();
 
-      if(!course_code) return alert("اكتب course_code للمقرر");
+      if(!course_code) return alert("اكتب كود المقرر");
       if(!rule_text) return alert("اكتب نص السياسة");
 
       await api("admin_policies_upsert", {
-        admin_pin,
         course_code,
         rule_id: rule_id || "",
         rule_text,
-        active: active,
+        active,
         sort: sort || 0
       });
 
@@ -183,9 +166,8 @@
     }
 
     async function delPolicy(rule_id){
-      const admin_pin = document.getElementById("pin").value.trim();
       if(!confirm("تأكيد حذف السياسة؟ (سيتم تعطيلها)")) return;
-      await api("admin_policies_delete", { admin_pin, rule_id });
+      await api("admin_policies_delete", { rule_id });
       await loadPolicies();
     }
 

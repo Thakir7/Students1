@@ -1,5 +1,4 @@
-
-const API_URL = "https://script.google.com/macros/s/AKfycbzn3WosuZMvLFDvQX6IUJPPGokX-0uOr68EeGLfAbMb3pgqspaQ1On3hnsZpu2afSCWbg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxv9vlzDiZEv8rB9nRF6Dm7OkU5ophr7eyydSXQ8lt5romkgdj88kZ1LjKcUEl4S_ry6A/exec";
 
 function saveSession(data){
   localStorage.setItem("token", data.token);
@@ -11,6 +10,7 @@ function getStudent(){ return JSON.parse(localStorage.getItem("student")||"null"
 function logout(){
   localStorage.removeItem("token");
   localStorage.removeItem("student");
+  localStorage.removeItem("admin_ok");
   location.href = "index.html";
 }
 function requireLogin(){

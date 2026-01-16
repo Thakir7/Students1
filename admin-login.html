@@ -22,7 +22,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
-    // ✅ ضع apiKey الحقيقي هنا
     const firebaseConfig = {
       apiKey: "AIzaSyB99dmAbCJclwyipiM3f7pm9M1tofL6nZU",
       authDomain: "students1-bb615.firebaseapp.com",
@@ -45,7 +44,6 @@
         const cred = await signInWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
         const token = await cred.user.getIdToken(true);
         localStorage.setItem("firebase_token", token);
-        localStorage.setItem("is_admin", "1");
         location.href = "admin.html";
       }catch(e){
         msg.className="msg err";

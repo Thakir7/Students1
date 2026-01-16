@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>سجل الحضور والغياب</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -9,9 +10,7 @@
 <div class="container">
   <div class="topbar">
     <div class="brand">سجل الحضور والغياب</div>
-    <div class="actions">
-      <a class="btn" href="dashboard.html">رجوع</a>
-    </div>
+    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
   <div class="card">
@@ -22,31 +21,31 @@
 
 <script src="assets/app.js"></script>
 <script>
-  function renderTable(head, rows){
+  function renderRows(rows){
+    if(!rows || !rows.length){ tbl.innerHTML = `<div class="muted">لا توجد بيانات.</div>`; return; }
+    const head = Object.keys(rows[0]);
     const thead = `<tr>${head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
-    const tbody = rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+    const tbody = rows.map(r=>`<tr>${head.map(h=>`<td>${esc(r[h])}</td>`).join("")}</tr>`).join("");
     tbl.innerHTML = `<table class="table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
   }
 
   async function init(){
     requireStudentOrAdmin();
 
+    // ✅ وضع المدرب
     if(isAdmin()){
       const course = qs("course") || localStorage.getItem("admin_course") || "";
       const section = qs("section") || localStorage.getItem("admin_section") || "";
-      const data = await api("admin_attendance_sheet",{course_code:course, section});
-      meta.textContent = `المقرر: ${course} | الشعبة: ${section || "بدون شعبة"} | عرض: جميع المتدربين`;
-      renderTable(data.head, data.rows);
+      const data = await api("admin_attendance_sheet", { course_code: course, section });
+      meta.textContent = `المدرب: عرض جميع المتدربين | المقرر: ${data.course_code || "-"} | الشعبة: ${data.section || "-"}`;
+      renderRows(data.rows || []);
       return;
     }
 
-    const data = await api("attendance_get",{});
-    meta.textContent = `المقرر: ${data.course_code} | الشعبة: ${data.section || "بدون شعبة"} | عرض: بياناتك فقط`;
-    if(!data.row){
-      tbl.innerHTML = `<div class="muted">لا توجد بيانات حضور لهذا المتدرب.</div>`;
-      return;
-    }
-    renderTable(data.head, [data.row]);
+    // ✅ وضع المتدرب
+    const data = await api("attendance_get", {});
+    meta.textContent = `المقرر: ${data.course_code || "-"} | الشعبة: ${data.section || "-"} | سجل حضور المتدرب:`;
+    renderRows(data.rows || []);
   }
 
   init().catch(e=>alert(e.message||e));

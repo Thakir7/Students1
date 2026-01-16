@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>خطة المقرر</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -9,41 +10,30 @@
 <div class="container">
   <div class="topbar">
     <div class="brand">خطة المقرر</div>
-    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
+    <div class="actions">
+      <a class="btn" href="dashboard.html">رجوع</a>
+      <button class="btn" style="display:none" id="exitAdminBtn" onclick="exitAdmin()">خروج المدرب</button>
+    </div>
   </div>
 
   <div class="card">
     <div id="meta" class="muted"></div>
-    <div class="tableWrap" id="tbl"></div>
+    <div id="tbl"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-  function renderRows(rows){
-    if(!rows.length){ tbl.innerHTML = `<div class="muted">لا توجد بيانات خطة.</div>`; return; }
-    const head = Object.keys(rows[0]);
-    const thead = `<tr>${head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
-    const tbody = rows.map(r=>`<tr>${head.map(h=>`<td>${esc(r[h])}</td>`).join("")}</tr>`).join("");
-    tbl.innerHTML = `<table class="table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
-  }
-
   async function init(){
     requireStudentOrAdmin();
 
-    if(isAdmin()){
-      const course = qs("course") || localStorage.getItem("admin_course") || "";
-      const data = await api("admin_plan_get",{course_code:course});
-      meta.textContent = `المقرر: ${course} | عرض: خطة المقرر`;
-      renderRows(data.rows||[]);
-      return;
-    }
+    const course = isAdmin()? getAdminCourse() : getSelectedCourse();
+    if (isAdmin()) exitAdminBtn.style.display="inline-flex";
 
-    const data = await api("plan_get",{});
-    meta.textContent = `المقرر: ${data.course_code} | عرض: خطة المقرر`;
-    renderRows(data.rows||[]);
+    meta.textContent = `المقرر: ${course||"-"}`;
+    const data = await api("plan_get", { course });
+    renderTable(tbl, data.rows, { title: "خطة المقرر" });
   }
-
   init().catch(e=>alert(e.message||e));
 </script>
 </body>

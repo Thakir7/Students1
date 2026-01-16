@@ -1,213 +1,119 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>بوابة المتدرب</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>الرئيسية</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <div class="brand">بوابة المتدرب</div>
-      <div class="actions">
-        <button class="btn" id="btnExitAdmin" style="display:none" onclick="exitAdminMode()">خروج وضع المدرب</button>
-        <button class="btn" id="btnLogout" onclick="logoutStudent()">تسجيل خروج</button>
-      </div>
-    </div>
-
-    <div class="card" id="studentCard">
-      <div class="h2">بيانات المتدرب</div>
-      <div class="grid2">
-        <div><span class="muted">الاسم:</span> <b id="sName"></b></div>
-        <div><span class="muted">الرقم التدريبي:</span> <b id="sId"></b></div>
-        <div><span class="muted">الجوال:</span> <b id="sMobile"></b></div>
-        <div><span class="muted">البريد:</span> <b id="sEmail"></b></div>
-      </div>
-
-      <div class="row" style="margin-top:12px">
-        <select id="courseSel" class="input" disabled></select>
-        <select id="sectionSel" class="input" disabled></select>
-        <button class="btn primary" onclick="openServices()">فتح خدمات المقرر</button>
-      </div>
-      <div class="muted" style="margin-top:6px">اختر المقرر ثم افتح أي خدمة من الأسفل</div>
-    </div>
-
-    <!-- admin picker -->
-    <div class="card" id="adminPicker" style="display:none">
-      <div class="h2">وضع المدرب</div>
-      <div class="row">
-        <select id="aCourse" class="input"></select>
-        <select id="aSection" class="input"></select>
-        <button class="btn primary" onclick="saveAdminPick()">اعتماد</button>
-      </div>
-      <div class="muted" style="margin-top:6px">بعد الاعتماد ستظهر قائمة المتدربين وروابط السجلات</div>
-
-      <div class="row" style="margin-top:12px">
-        <button class="btn" onclick="openPage('attendance.html')">سجل الحضور والغياب</button>
-        <button class="btn" onclick="openPage('grades.html')">سجل الدرجات</button>
-        <button class="btn" onclick="openPage('policies.html')">سياسات المقرر</button>
-        <button class="btn" onclick="openPlan()">خطة المقرر</button>
-      </div>
-
-      <div class="h2" style="margin-top:14px">قائمة المتدربين (حسب المقرر/الشعبة)</div>
-      <div id="rosterBox" class="tableWrap"></div>
-    </div>
-
-    <!-- reminders (student only) -->
-    <div class="card" id="remCard">
-      <div class="h2">التذكيرات</div>
-      <div id="remBox" style="margin-top:10px"></div>
-    </div>
-
-    <div class="card">
-      <div class="h2">الخدمات</div>
-      <div class="services">
-        <a class="svc" href="attendance.html">سجل الحضور والغياب</a>
-        <a class="svc" href="grades.html">سجل الدرجات</a>
-        <a class="svc" href="plan.html">خطة المقرر</a>
-        <a class="svc" href="policies.html">سياسات المقرر التدريبي</a>
-        <a class="svc" href="calendar.html">التقويم الدراسي</a>
-        <a class="svc" href="contact.html">التواصل مع المدرب</a>
-      </div>
-      <div class="muted" style="margin-top:10px">تم حذف صفحة “المتدرب المتميز” حسب طلبك.</div>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">الرئيسية</div>
+    <div class="actions">
+      <button class="btn" onclick="logoutStudent()">تسجيل خروج</button>
     </div>
   </div>
+
+  <div class="card">
+    <div class="h2">بيانات المتدرب</div>
+    <div id="meta" class="muted"></div>
+
+    <div class="row" style="margin-top:12px">
+      <select id="courseSel"></select>
+      <select id="sectionSel"></select>
+      <button class="btn primary" onclick="applySel()">فتح خدمات المقرر</button>
+    </div>
+
+    <div id="remindersBox"></div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="h2">الخدمات</div>
+    <div class="grid">
+      <a class="tile" href="policies.html"><div class="t">سياسات المقرر التدريبي</div><div class="d">حسب المقرر</div></a>
+      <a class="tile" href="plan.html"><div class="t">خطة المقرر</div><div class="d">حسب المقرر</div></a>
+      <a class="tile" href="attendance.html"><div class="t">سجل الحضور والغياب</div><div class="d">حسب الشعبة</div></a>
+      <a class="tile" href="grades.html"><div class="t">سجل الدرجات</div><div class="d">حسب الشعبة</div></a>
+      <a class="tile" href="calendar.html"><div class="t">التقويم الدراسي</div><div class="d">عرض التقويم</div></a>
+      <a class="tile" href="contact.html"><div class="t">التواصل مع المدرب</div><div class="d">بيانات التواصل</div></a>
+    </div>
+  </div>
+</div>
 
 <script src="assets/app.js"></script>
 <script>
   async function init(){
-    if(isAdmin()){
-      document.getElementById("btnExitAdmin").style.display="inline-block";
-      document.getElementById("btnLogout").style.display="none";
-      document.getElementById("studentCard").style.display="none";
-      document.getElementById("remCard").style.display="none";
-      document.getElementById("adminPicker").style.display="block";
-      await loadAdminDiscovery();
+    requireStudentOrAdmin();
+
+    // لو كان Admin لا تستخدم هذه الصفحة
+    if (isAdmin()){
+      location.href = "admin-dashboard.html";
       return;
     }
 
-    // student
-    const me = await api("me",{});
-    const st = me.student;
-    document.getElementById("sName").textContent = st.name || "-";
-    document.getElementById("sId").textContent = st.trainee_id || "-";
-    document.getElementById("sMobile").textContent = st.mobile || "-";
-    document.getElementById("sEmail").textContent = st.email || "-";
+    const st = getStudent();
+    meta.innerHTML = `
+      <div><span class="badge">${esc(st.name||"")}</span></div>
+      <div style="margin-top:6px">الرقم التدريبي: <b>${esc(st.trainee_id||"")}</b></div>
+    `;
 
-    // course/section from profile (ثابت)
-    courseSel.innerHTML = `<option>${esc(st.course||"")}</option>`;
-    sectionSel.innerHTML = `<option>${esc(st.section||"")}</option>`;
-    courseSel.disabled = true;
-    sectionSel.disabled = true;
+    // بناء قوائم المقررات/الشعب
+    const courses = st.courses || [];
+    const courseCodes = [...new Set(courses.map(x=>x.course_code).filter(Boolean))];
+    const currentCourse = getSelectedCourse() || courseCodes[0] || "";
+    courseSel.innerHTML = courseCodes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    courseSel.value = currentCourse;
 
+    function fillSections(){
+      const c = courseSel.value;
+      const sections = courses.filter(x=>x.course_code===c).map(x=>x.section).filter(Boolean);
+      const uniq = [...new Set(sections)];
+      sectionSel.innerHTML = uniq.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
+      const curS = getSelectedSection();
+      sectionSel.value = (uniq.includes(curS)?curS:(uniq[0]||""));
+    }
+    fillSections();
+    courseSel.addEventListener("change", fillSections);
+
+    // تحميل التذكيرات
     await loadReminders();
   }
 
-  function openServices(){
-    // المتدرب يفتح الخدمات من البطاقات
-    window.scrollTo({top:document.body.scrollHeight, behavior:"smooth"});
-  }
-
-  function openPage(page){
-    const course = localStorage.getItem("admin_course") || "";
-    const section = localStorage.getItem("admin_section") || "";
-    if(!course) return alert("اختر المقرر أولاً");
-    const u = `${page}?course=${encodeURIComponent(course)}&section=${encodeURIComponent(section)}`;
-    location.href = u;
-  }
-  function openPlan(){
-    const course = localStorage.getItem("admin_course") || "";
-    if(!course) return alert("اختر المقرر أولاً");
-    location.href = `plan.html?course=${encodeURIComponent(course)}`;
-  }
-
-  async function loadAdminDiscovery(){
-    const d = await api("admin_discovery",{});
-    aCourse.innerHTML = d.courses.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
-    aCourse.onchange = ()=>{
-      const c = aCourse.value;
-      const secs = d.sectionsByCourse[c] || [""];
-      aSection.innerHTML = secs.map(s=>{
-        const label = s ? `الشعبة ${s}` : "بدون شعبة";
-        return `<option value="${esc(s)}">${esc(label)}</option>`;
-      }).join("");
-    };
-    aCourse.onchange();
-
-    // حاول تحميل اختيار سابق
-    const pc = localStorage.getItem("admin_course");
-    const ps = localStorage.getItem("admin_section");
-    if(pc){
-      aCourse.value = pc; aCourse.onchange();
-      if(ps!==null) aSection.value = ps;
-      await saveAdminPick(true);
-    }
-  }
-
-  async function saveAdminPick(silent=false){
-    localStorage.setItem("admin_course", aCourse.value);
-    localStorage.setItem("admin_section", aSection.value);
-    if(!silent) alert("تم اعتماد المقرر والشعبة ✅");
-    await loadRoster();
-  }
-
-  async function loadRoster(){
-    const course = localStorage.getItem("admin_course") || "";
-    const section = localStorage.getItem("admin_section") || "";
-    const r = await api("admin_roster",{course_code:course, section});
-    const rows = r.students || [];
-
-    const html = `
-      <table class="table">
-        <thead>
-          <tr>
-            <th>م</th>
-            <th>اسم المتدرب</th>
-            <th>الرقم التدريبي</th>
-            <th>الجوال</th>
-            <th>البريد</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((x,i)=>`
-            <tr>
-              <td>${i+1}</td>
-              <td>${esc(x.name)}</td>
-              <td>${esc(x.trainee_id)}</td>
-              <td>${esc(x.mobile)}</td>
-              <td>${esc(x.email)}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    `;
-    rosterBox.innerHTML = html;
+  async function applySel(){
+    setSelectedCourseSection(courseSel.value, sectionSel.value);
+    await loadReminders();
+    alert("تم اختيار المقرر/الشعبة.");
   }
 
   async function loadReminders(){
-    const data = await api("reminders_get",{});
-    const now = Date.now();
-    const rows = data.rows||[];
-    if(!rows.length){
-      remBox.innerHTML = `<div class="muted">لا توجد تذكيرات.</div>`;
-      return;
+    remindersBox.innerHTML = "";
+    const course = courseSel.value;
+    if (!course) return;
+
+    try{
+      const data = await api("reminders_get", { course });
+      const items = data.items || [];
+      if (!items.length){
+        remindersBox.innerHTML = `<div class="muted" style="margin-top:10px">لا توجد تذكيرات.</div>`;
+        return;
+      }
+      remindersBox.innerHTML = items.map(x=>{
+        const cls = x.done ? "rem done":"rem";
+        return `
+          <div class="${cls}">
+            <div class="title">${esc(x.title)}</div>
+            <div class="when">${esc(x.due_text||"")}</div>
+            <div class="muted" style="margin-top:6px">${esc(x.note||"")}</div>
+          </div>
+        `;
+      }).join("");
+    }catch(e){
+      remindersBox.innerHTML = `<div class="muted" style="margin-top:10px">تعذر تحميل التذكيرات: ${esc(e.message||e)}</div>`;
     }
-    remBox.innerHTML = rows.map(r=>{
-      const dueStr = String(r.due_at||"");
-      const due = new Date(dueStr).getTime();
-      const expired = due && due < now;
-      return `
-        <div class="remItem ${expired?'expired':''}">
-          <div class="title">${esc(r.title||"")}</div>
-          <div class="note">${esc(r.note||"")}</div>
-          <div class="time">${esc(dueStr)}</div>
-        </div>
-      `;
-    }).join("");
   }
 
-  init().catch(e=>alert(e.message||e));
+  init();
 </script>
 </body>
 </html>

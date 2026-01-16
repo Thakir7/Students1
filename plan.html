@@ -1,63 +1,50 @@
-<!doctype html><html lang="ar" dir="rtl">
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <link rel="stylesheet" href="assets/style.css"/>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>خطة المقرر</title>
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <a class="btn" href="dashboard.html">رجوع</a>
-      <div class="brand">خطة المقرر</div>
-      <button class="btn" onclick="logout()">خروج</button>
-    </div>
-
-    <div class="card">
-      <div class="h2" id="title"></div>
-      <div class="muted">تعتمد الخطة على تبويب Plan في الشيت الأساسي، مع عمود course_code.</div>
-    </div>
-
-    <div class="card" id="content"></div>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">خطة المقرر</div>
+    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
-  <script src="assets/app.js"></script>
-  <script>
-    requireLogin();
-    const course = qs("course") || "";
-    setText("title", "المقرر: " + course);
+  <div class="card">
+    <div id="meta" class="muted"></div>
+    <div class="tableWrap" id="tbl"></div>
+  </div>
+</div>
 
-    (async()=>{
-      try{
-        const data = await api("plan_get",{ course_code: course });
-        const rows = data.rows || [];
-        if(!rows.length){
-          document.getElementById("content").innerHTML = `<div class="muted">لا توجد خطة لهذا المقرر. تأكد من تعبئة course_code في تبويب Plan.</div>`;
-          return;
-        }
+<script src="assets/app.js"></script>
+<script>
+  function renderRows(rows){
+    if(!rows.length){ tbl.innerHTML = `<div class="muted">لا توجد بيانات خطة.</div>`; return; }
+    const head = Object.keys(rows[0]);
+    const thead = `<tr>${head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
+    const tbody = rows.map(r=>`<tr>${head.map(h=>`<td>${esc(r[h])}</td>`).join("")}</tr>`).join("");
+    tbl.innerHTML = `<table class="table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+  }
 
-        // اعرض كل الأعمدة الموجودة (ما عدا course_code) بشكل مرن
-        const headers = Object.keys(rows[0]).filter(h => h !== "course_code");
+  async function init(){
+    requireStudentOrAdmin();
 
-        document.getElementById("content").innerHTML = `
-          <table class="table">
-            <thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead>
-            <tbody>
-              ${rows.map(r=>`
-                <tr>
-                  ${headers.map(h=>`<td>${esc(r[h] ?? "")}</td>`).join("")}
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        `;
-      }catch(e){
-        document.getElementById("content").innerHTML = `<div class="msg err">${e.message}</div>`;
-      }
-    })();
-
-    function esc(s){
-      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    if(isAdmin()){
+      const course = qs("course") || localStorage.getItem("admin_course") || "";
+      const data = await api("admin_plan_get",{course_code:course});
+      meta.textContent = `المقرر: ${course} | عرض: خطة المقرر`;
+      renderRows(data.rows||[]);
+      return;
     }
-  </script>
-</body></html>
+
+    const data = await api("plan_get",{});
+    meta.textContent = `المقرر: ${data.course_code} | عرض: خطة المقرر`;
+    renderRows(data.rows||[]);
+  }
+
+  init().catch(e=>alert(e.message||e));
+</script>
+</body>
+</html>

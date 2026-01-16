@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>الرئيسية</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <div class="container">
   <div class="topbar">
-    <div class="brand">الرئيسية</div>
+    <div class="brand">بوابة المتدرب</div>
     <div class="actions">
       <button class="btn" onclick="logoutStudent()">تسجيل خروج</button>
     </div>
@@ -17,103 +17,56 @@
 
   <div class="card">
     <div class="h2">بيانات المتدرب</div>
-    <div id="meta" class="muted"></div>
-
-    <div class="row" style="margin-top:12px">
-      <select id="courseSel"></select>
-      <select id="sectionSel"></select>
-      <button class="btn primary" onclick="applySel()">فتح خدمات المقرر</button>
-    </div>
-
-    <div id="remindersBox"></div>
+    <div id="info" class="muted" style="margin-top:8px"></div>
   </div>
 
   <div class="card" style="margin-top:12px">
     <div class="h2">الخدمات</div>
-    <div class="grid">
-      <a class="tile" href="policies.html"><div class="t">سياسات المقرر التدريبي</div><div class="d">حسب المقرر</div></a>
-      <a class="tile" href="plan.html"><div class="t">خطة المقرر</div><div class="d">حسب المقرر</div></a>
-      <a class="tile" href="attendance.html"><div class="t">سجل الحضور والغياب</div><div class="d">حسب الشعبة</div></a>
-      <a class="tile" href="grades.html"><div class="t">سجل الدرجات</div><div class="d">حسب الشعبة</div></a>
-      <a class="tile" href="calendar.html"><div class="t">التقويم الدراسي</div><div class="d">عرض التقويم</div></a>
-      <a class="tile" href="contact.html"><div class="t">التواصل مع المدرب</div><div class="d">بيانات التواصل</div></a>
+    <div class="grid" style="margin-top:10px">
+      <a class="btn" href="grades.html">سجل الدرجات</a>
+      <a class="btn" href="attendance.html">سجل الحضور والغياب</a>
+      <a class="btn" href="plan.html">خطة المقرر</a>
+      <a class="btn" href="policies.html">سياسات المقرر التدريبي</a>
+      <a class="btn" href="contact.html">التواصل مع المدرب</a>
+      <a class="btn" href="calendar.html">التقويم الدراسي</a>
     </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="h2">التذكيرات (حسب المقرر)</div>
+    <div class="muted">تظهر للمتدرب باللون الأحمر، وإذا انتهى وقتها يتوسطها خط.</div>
+    <div id="remWrap" style="margin-top:10px"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-  async function init(){
-    requireStudentOrAdmin();
+async function init(){
+  requireStudent();
+  const st = getStudent();
+  info.innerHTML = `
+    <div><b>${esc(st.name||"")}</b> — الرقم التدريبي: <span class="badge">${esc(st.training_id||"")}</span></div>
+    <div style="margin-top:6px">المقرر: <b>${esc(st.course||"-")}</b> | الشعبة: <b>${esc(st.section||"-")}</b></div>
+  `;
 
-    // لو كان Admin لا تستخدم هذه الصفحة
-    if (isAdmin()){
-      location.href = "admin-dashboard.html";
-      return;
-    }
-
-    const st = getStudent();
-    meta.innerHTML = `
-      <div><span class="badge">${esc(st.name||"")}</span></div>
-      <div style="margin-top:6px">الرقم التدريبي: <b>${esc(st.trainee_id||"")}</b></div>
-    `;
-
-    // بناء قوائم المقررات/الشعب
-    const courses = st.courses || [];
-    const courseCodes = [...new Set(courses.map(x=>x.course_code).filter(Boolean))];
-    const currentCourse = getSelectedCourse() || courseCodes[0] || "";
-    courseSel.innerHTML = courseCodes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
-    courseSel.value = currentCourse;
-
-    function fillSections(){
-      const c = courseSel.value;
-      const sections = courses.filter(x=>x.course_code===c).map(x=>x.section).filter(Boolean);
-      const uniq = [...new Set(sections)];
-      sectionSel.innerHTML = uniq.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
-      const curS = getSelectedSection();
-      sectionSel.value = (uniq.includes(curS)?curS:(uniq[0]||""));
-    }
-    fillSections();
-    courseSel.addEventListener("change", fillSections);
-
-    // تحميل التذكيرات
-    await loadReminders();
+  const data = await api("reminders_get",{});
+  const now = Date.now();
+  if (!data.items || data.items.length===0){
+    remWrap.innerHTML = `<div class="muted">لا توجد تذكيرات.</div>`;
+    return;
   }
-
-  async function applySel(){
-    setSelectedCourseSection(courseSel.value, sectionSel.value);
-    await loadReminders();
-    alert("تم اختيار المقرر/الشعبة.");
-  }
-
-  async function loadReminders(){
-    remindersBox.innerHTML = "";
-    const course = courseSel.value;
-    if (!course) return;
-
-    try{
-      const data = await api("reminders_get", { course });
-      const items = data.items || [];
-      if (!items.length){
-        remindersBox.innerHTML = `<div class="muted" style="margin-top:10px">لا توجد تذكيرات.</div>`;
-        return;
-      }
-      remindersBox.innerHTML = items.map(x=>{
-        const cls = x.done ? "rem done":"rem";
-        return `
-          <div class="${cls}">
-            <div class="title">${esc(x.title)}</div>
-            <div class="when">${esc(x.due_text||"")}</div>
-            <div class="muted" style="margin-top:6px">${esc(x.note||"")}</div>
-          </div>
-        `;
-      }).join("");
-    }catch(e){
-      remindersBox.innerHTML = `<div class="muted" style="margin-top:10px">تعذر تحميل التذكيرات: ${esc(e.message||e)}</div>`;
-    }
-  }
-
-  init();
+  remWrap.innerHTML = data.items.map(it=>{
+    const done = it.end_ms && it.end_ms < now;
+    const cls = done ? "rem done" : "rem red";
+    const when = it.end_ms ? new Date(it.end_ms).toLocaleString("ar-SA") : "-";
+    return `<div class="${cls}">
+      <div><b>${esc(it.title||"")}</b></div>
+      <div class="muted">ينتهي: ${esc(when)}</div>
+      ${it.note ? `<div class="muted">${esc(it.note)}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

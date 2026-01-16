@@ -1,0 +1,68 @@
+<!doctype html><html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="assets/style.css"/>
+  <title>لوحة المدير</title>
+  <script>
+    if (!localStorage.getItem("firebase_token")) location.href="admin-login.html";
+  </script>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">لوحة المدير / المدرب</div>
+      <button class="btn" onclick="adminLogout()">تسجيل خروج</button>
+    </div>
+
+    <div class="card">
+      <div class="h2">اختيار المقرر</div>
+      <div class="row" style="margin-top:10px">
+        <select id="courseSel" class="input"></select>
+        <button class="btn primary" onclick="openServices()">فتح خدمات المقرر</button>
+      </div>
+      <div class="muted" style="margin-top:8px">اختر المقرر ثم افتح أي خدمة من الأسفل</div>
+    </div>
+
+    <div class="card">
+      <div class="h2">الخدمات</div>
+      <div class="grid2" style="margin-top:10px">
+        <button class="btn big" onclick="go('policies')">سياسات المقرر التدريبي</button>
+        <button class="btn big" onclick="go('plan')">خطة المقرر</button>
+        <button class="btn big" onclick="go('attendance')">سجل الحضور والغياب</button>
+        <button class="btn big" onclick="go('grades')">سجل الدرجات</button>
+        <button class="btn big" onclick="go('calendar')">التقويم الدراسي</button>
+        <button class="btn big" onclick="go('contact')">التواصل</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/app.js"></script>
+  <script>
+    // لا نستخدم requireLogin() هنا لأن هذه لوحة مدير وليست متدرب
+
+    async function loadCourses(){
+      const sel = document.getElementById("courseSel");
+      sel.innerHTML = "<option>جاري التحميل...</option>";
+      const data = await api("admin_courses", {});
+      sel.innerHTML = data.courses.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    }
+
+    function openServices(){
+      const c = document.getElementById("courseSel").value;
+      localStorage.setItem("admin_course", c);
+      alert("تم اختيار المقرر: " + c + " ✅\nالآن افتح أي خدمة من الأسفل.");
+    }
+
+    function go(page){
+      const c = localStorage.getItem("admin_course") || document.getElementById("courseSel").value;
+      if(!c) return alert("اختر المقرر أولاً");
+      location.href = `admin-${page}.html?course=${encodeURIComponent(c)}`;
+    }
+
+    function esc(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+    loadCourses();
+  </script>
+</body>
+</html>

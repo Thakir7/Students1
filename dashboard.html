@@ -35,7 +35,9 @@
         <a class="btn" id="grBtn">سجل الدرجات</a>
         <a class="btn" href="calendar.html">التقويم الدراسي</a>
         <a class="btn" href="contact.html">التواصل مع المدرب</a>
-        <a class="btn" href="admin.html">لوحة المدير</a>
+
+        <!-- مخفي افتراضيًا -->
+        <a class="btn" id="adminLink" href="admin.html" style="display:none">لوحة المدير</a>
       </div>
       <div class="muted small" style="margin-top:10px">تم حذف صفحة "المتدرب المتميز" حسب طلبك.</div>
     </div>
@@ -74,6 +76,11 @@
       });
       sel.onchange = wireLinks;
       wireLinks();
+
+      // إظهار لوحة المدير فقط إذا تم التحقق من المدير
+      if (localStorage.getItem("admin_ok") === "1") {
+        document.getElementById("adminLink").style.display = "inline-flex";
+      }
     })();
   </script>
 </body></html>

@@ -5,25 +5,28 @@ function saveSession(data){
   localStorage.setItem("student", JSON.stringify(data.student));
 }
 function getToken(){ return localStorage.getItem("token"); }
-function getStudent(){ return JSON.parse(localStorage.getItem("student")||"null"); }
+function getStudent(){ return JSON.parse(localStorage.getItem("student") || "null"); }
 
 function isAdmin(){
+  // ✅ لازم mode=admin + وجود firebase_token
   return localStorage.getItem("mode")==="admin" && !!localStorage.getItem("firebase_token");
 }
+
 function requireStudentOrAdmin(){
   if (isAdmin()) return;
-  if (!getToken()) location.href="index.html";
+  if (!getToken()) location.href="Index.html";   // ✅ انت عندك Index.html
 }
 
 function logoutStudent(){
   localStorage.removeItem("token");
   localStorage.removeItem("student");
-  location.href="index.html";
+  location.href="Index.html";
 }
+
 function exitAdminMode(){
   localStorage.removeItem("mode");
   localStorage.removeItem("firebase_token");
-  location.href="index.html";
+  location.href="Index.html";
 }
 
 async function api(action, payload={}){
@@ -33,11 +36,17 @@ async function api(action, payload={}){
     firebase_token: localStorage.getItem("firebase_token"),
     ...payload
   });
+
   const res = await fetch(API_URL, { method:"POST", body });
-  const data = await res.json().catch(()=>({ok:false,message:"فشل قراءة الرد"}));
+  const data = await res.json().catch(()=>({ok:false, message:"تعذّر قراءة الرد"}));
   if (!data.ok) throw new Error(data.message || "خطأ");
   return data;
 }
 
 function qs(k){ return new URLSearchParams(location.search).get(k); }
-function esc(s){ return String(s??"").replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+function esc(s){
+  return String(s??"").replace(/[&<>"']/g,m=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[m]));
+}

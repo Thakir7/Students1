@@ -18,30 +18,23 @@
     <div class="muted">خاص بالمدرب/المدير فقط</div>
 
     <div class="row" style="margin-top:12px">
-      <input id="email" class="input" type="email" placeholder="البريد الإلكتروني" autocomplete="username">
-      <div style="display:flex;gap:10px;align-items:center;width:100%">
-        <input id="pass" class="input" type="password" placeholder="كلمة المرور" autocomplete="current-password" style="flex:1">
-        <button class="btn" type="button" onclick="togglePass()">إظهار</button>
-      </div>
+      <input id="email" class="input" type="email" placeholder="البريد الإلكتروني">
+      <input id="pass" class="input" type="password" placeholder="كلمة المرور">
     </div>
 
     <div class="row" style="margin-top:12px">
       <button class="btn primary" onclick="login()">دخول</button>
-      <button class="btn" onclick="logout()">تسجيل خروج</button>
+      <button class="btn" onclick="clearAdmin()">مسح الدخول</button>
     </div>
 
     <div id="msg" class="muted" style="margin-top:12px"></div>
   </div>
 </div>
 
+<script src="assets/app.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-  import {
-    getAuth,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyB99dmAbCJclwyipiM3f7pm9M1tofL6nZU",
@@ -52,62 +45,27 @@
     appId: "1:814840688419:web:85a568e6969d2f4eca2696"
   };
 
-  const ADMIN_EMAIL = "thakerg@tvtc.gov.sa";
-
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  function setMsg(t){ msg.textContent = t || ""; }
-
-  // ✅ تحويل تلقائي إذا كان المدرب مسجّل دخول مسبقًا
-  onAuthStateChanged(auth, async (user) => {
-    if(!user) return;
-    const emailNow = (user.email || "").toLowerCase();
-    if(emailNow !== ADMIN_EMAIL){
-      await signOut(auth);
-      localStorage.removeItem("firebase_token");
-      localStorage.removeItem("mode");
-      setMsg("هذا البريد غير مخوّل للدخول.");
-      return;
-    }
-    const token = await user.getIdToken(true);
-    localStorage.setItem("firebase_token", token);
-    localStorage.setItem("mode", "admin");
-    location.href = "admin-dashboard.html";
-  });
-
-  window.togglePass = function(){
-    pass.type = (pass.type === "password") ? "text" : "password";
-  };
-
   window.login = async function(){
-    setMsg("جاري تسجيل الدخول...");
+    msg.textContent = "جاري تسجيل الدخول...";
     try{
-      const em = email.value.trim().toLowerCase();
-      if(em !== ADMIN_EMAIL){
-        setMsg("غير مسموح: استخدم بريد المدرب المعتمد فقط.");
-        return;
-      }
-
-      const userCred = await signInWithEmailAndPassword(auth, em, pass.value);
+      const userCred = await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
       const token = await userCred.user.getIdToken(true);
-
       localStorage.setItem("firebase_token", token);
       localStorage.setItem("mode", "admin");
-      localStorage.setItem("admin_email", em);
-
-      location.href = "admin.html";
+      location.href = "admin-dashboard.html";
     }catch(e){
-      setMsg("فشل الدخول: " + (e?.message || e));
+      msg.textContent = "فشل الدخول: " + (e?.message || e);
     }
   };
 
-  window.logout = async function(){
+  window.clearAdmin = async function(){
     try{ await signOut(auth); }catch(_){}
     localStorage.removeItem("firebase_token");
     localStorage.removeItem("mode");
-    localStorage.removeItem("admin_email");
-    setMsg("تم تسجيل الخروج.");
+    msg.textContent = "تم مسح دخول المدرب.";
   };
 </script>
 </body>

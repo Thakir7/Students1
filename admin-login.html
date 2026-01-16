@@ -1,55 +1,71 @@
-<!doctype html><html lang="ar" dir="rtl">
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <link rel="stylesheet" href="assets/style.css"/>
-  <title>دخول المدرب / المدير</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>دخول المدرب</title>
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <div class="container" style="max-width:420px;margin-top:70px">
-    <div class="card">
-      <div class="h2">دخول المدرب / المدير</div>
-      <div class="muted">الدخول عبر Firebase (آمن واحترافي)</div>
-      <hr/>
-      <input id="email" class="input" placeholder="البريد الإلكتروني" autocomplete="username">
-      <input id="password" type="password" class="input" placeholder="كلمة المرور" autocomplete="current-password">
-      <button class="btn primary" onclick="doLogin()">دخول</button>
-      <div id="msg" class="msg"></div>
-    </div>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">دخول المدرب</div>
+    <div class="actions"><a class="btn" href="index.html">رجوع</a></div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+  <div class="card">
+    <div class="h2">تسجيل الدخول (Firebase)</div>
+    <div class="muted">خاص بالمدرب/المدير فقط</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB99dmAbCJclwyipiM3f7pm9M1tofL6nZU",
-      authDomain: "students1-bb615.firebaseapp.com",
-      projectId: "students1-bb615",
-      storageBucket: "students1-bb615.firebasestorage.app",
-      messagingSenderId: "814840688419",
-      appId: "1:814840688419:web:85a568e6969d2f4eca2696"
-    };
+    <div class="row" style="margin-top:12px">
+      <input id="email" class="input" type="email" placeholder="البريد الإلكتروني">
+      <input id="pass" class="input" type="password" placeholder="كلمة المرور">
+    </div>
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" onclick="login()">دخول</button>
+      <button class="btn" onclick="logout()">مسح الدخول</button>
+    </div>
 
-    const msg = document.getElementById("msg");
-    const emailEl = document.getElementById("email");
-    const passEl  = document.getElementById("password");
+    <div id="msg" class="muted" style="margin-top:12px"></div>
+  </div>
+</div>
 
-    window.doLogin = async function(){
-      msg.className="msg"; msg.textContent="";
-      try{
-        const cred = await signInWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
-        const token = await cred.user.getIdToken(true);
-        localStorage.setItem("firebase_token", token);
-        location.href = "admin.html";
-      }catch(e){
-        msg.className="msg err";
-        msg.textContent = "فشل تسجيل الدخول. تأكد من البريد وكلمة المرور.";
-      }
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB99dmAbCJclwyipiM3f7pm9M1tofL6nZU",
+    authDomain: "students1-bb615.firebaseapp.com",
+    projectId: "students1-bb615",
+    storageBucket: "students1-bb615.firebasestorage.app",
+    messagingSenderId: "814840688419",
+    appId: "1:814840688419:web:85a568e6969d2f4eca2696"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  window.login = async function(){
+    msg.textContent = "جاري تسجيل الدخول...";
+    try{
+      const userCred = await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
+      const token = await userCred.user.getIdToken(true);
+      localStorage.setItem("firebase_token", token);
+      localStorage.setItem("mode", "admin");
+      location.href = "admin.html";
+    }catch(e){
+      msg.textContent = "فشل الدخول: " + (e?.message || e);
     }
-  </script>
+  };
+
+  window.logout = async function(){
+    try{ await signOut(auth); }catch(_){}
+    localStorage.removeItem("firebase_token");
+    localStorage.removeItem("mode");
+    msg.textContent = "تم مسح دخول المدرب.";
+  };
+</script>
 </body>
 </html>

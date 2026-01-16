@@ -52,9 +52,11 @@
     try{
       const userCred = await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
       const token = await userCred.user.getIdToken(true);
+
       localStorage.setItem("firebase_token", token);
       localStorage.setItem("mode", "admin");
-      location.href = "admin-dashboard.html";
+
+      location.href = "admin-dashboard.html"; // ✅ الصحيح عندك
     }catch(e){
       msg.textContent = "فشل الدخول: " + (e?.message || e);
     }
@@ -64,8 +66,6 @@
     try{ await signOut(auth); }catch(_){}
     localStorage.removeItem("firebase_token");
     localStorage.removeItem("mode");
-    localStorage.removeItem("admin_course");
-    localStorage.removeItem("admin_section");
     msg.textContent = "تم مسح دخول المدرب.";
   };
 </script>

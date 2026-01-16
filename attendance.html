@@ -1,75 +1,55 @@
-<!doctype html><html lang="ar" dir="rtl">
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <link rel="stylesheet" href="assets/style.css"/>
-  <title>الحضور والغياب</title>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>سجل الحضور والغياب</title>
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <div class="container">
-    <div class="topbar">
+<div class="container">
+  <div class="topbar">
+    <div class="brand">سجل الحضور والغياب</div>
+    <div class="actions">
       <a class="btn" href="dashboard.html">رجوع</a>
-      <div class="brand">سجل الحضور والغياب</div>
-      <button class="btn" onclick="logout()">خروج</button>
     </div>
-
-    <div class="card">
-      <div class="h2" id="title"></div>
-      <div class="muted">يتم جلب البيانات مباشرة من تبويب "أيام المحاضرات" في الشيت الثاني.</div>
-    </div>
-
-    <div class="card">
-      <div class="h2">ملخص</div>
-      <div class="kpis" id="kpis"></div>
-    </div>
-
-    <div class="card" id="content"></div>
   </div>
 
-  <script src="assets/app.js"></script>
-  <script>
-    requireLogin();
-    const course = qs("course") || "";
-    setText("title", "المقرر: " + course);
+  <div class="card">
+    <div id="meta" class="muted"></div>
+    <div class="tableWrap" id="tbl"></div>
+  </div>
+</div>
 
-    (async()=>{
-      try{
-        const data = await api("attendance_get",{ course_code: course });
-        const rows = data.rows || [];
-        const a = data.absence || {};
-        document.getElementById("kpis").innerHTML = `
-          <div class="kpi"><div class="small muted">إجمالي الجلسات المسجلة</div><div class="v">${a.totalSessions ?? "-"}</div></div>
-          <div class="kpi"><div class="small muted">عدد الغياب</div><div class="v">${a.absentCount ?? "-"}</div></div>
-          <div class="kpi"><div class="small muted">نسبة الغياب (تقريبية)</div><div class="v">${(a.absentPct==null?"-":a.absentPct.toFixed(1)+"%")}</div></div>
-        `;
+<script src="assets/app.js"></script>
+<script>
+  function renderTable(head, rows){
+    const thead = `<tr>${head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
+    const tbody = rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+    tbl.innerHTML = `<table class="table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+  }
 
-        if(!rows.length){
-          document.getElementById("content").innerHTML = `<div class="muted">لا يوجد سجل حضور لهذا المتدرب في الشيت.</div>`;
-          return;
-        }
+  async function init(){
+    requireStudentOrAdmin();
 
-        document.getElementById("content").innerHTML = `
-          <table class="table">
-            <thead><tr><th>الأسبوع/الجلسة</th><th>التاريخ</th><th>الحالة</th></tr></thead>
-            <tbody>
-              ${rows.map(r=>`
-                <tr>
-                  <td>${esc(r.session_name||"")}</td>
-                  <td>${esc(r.session_date||"")}</td>
-                  <td>${esc(r.status||"")}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        `;
-
-      }catch(e){
-        document.getElementById("content").innerHTML = `<div class="msg err">${e.message}</div>`;
-      }
-    })();
-
-    function esc(s){
-      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    if(isAdmin()){
+      const course = qs("course") || localStorage.getItem("admin_course") || "";
+      const section = qs("section") || localStorage.getItem("admin_section") || "";
+      const data = await api("admin_attendance_sheet",{course_code:course, section});
+      meta.textContent = `المقرر: ${course} | الشعبة: ${section || "بدون شعبة"} | عرض: جميع المتدربين`;
+      renderTable(data.head, data.rows);
+      return;
     }
-  </script>
-</body></html>
+
+    const data = await api("attendance_get",{});
+    meta.textContent = `المقرر: ${data.course_code} | الشعبة: ${data.section || "بدون شعبة"} | عرض: بياناتك فقط`;
+    if(!data.row){
+      tbl.innerHTML = `<div class="muted">لا توجد بيانات حضور لهذا المتدرب.</div>`;
+      return;
+    }
+    renderTable(data.head, [data.row]);
+  }
+
+  init().catch(e=>alert(e.message||e));
+</script>
+</body>
+</html>

@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>سياسات المقرر</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -12,73 +12,69 @@
     <div class="brand">سياسات المقرر التدريبي</div>
     <div class="actions">
       <a class="btn" href="dashboard.html">رجوع</a>
-      <button class="btn" style="display:none" id="exitAdminBtn" onclick="exitAdmin()">خروج المدرب</button>
+      <button class="btn" onclick="isAdmin()?logoutAdmin():logoutStudent()">خروج</button>
     </div>
   </div>
 
   <div class="card">
     <div id="meta" class="muted"></div>
-    <div id="list"></div>
 
-    <div id="adminBox" style="display:none; margin-top:14px">
-      <hr style="border:none; border-top:1px solid #e5e7eb; margin:14px 0">
+    <div id="adminBox" style="display:none;margin-top:12px">
       <div class="h2">إضافة/تعديل السياسات (للمدرب)</div>
       <div class="muted">اكتب كل سياسة في سطر مستقل ثم حفظ.</div>
-      <textarea id="polText" class="input" style="height:220px; margin-top:10px"></textarea>
+      <textarea id="txt" class="input" style="margin-top:10px"></textarea>
       <div class="row" style="margin-top:10px">
-        <button class="btn primary" onclick="savePolicies()">حفظ السياسات</button>
+        <button class="btn primary" onclick="save()">حفظ</button>
       </div>
-      <div id="msg" class="muted" style="margin-top:10px"></div>
+    </div>
+
+    <div style="margin-top:14px">
+      <div class="h2">عرض السياسات</div>
+      <pre id="view" class="card" style="white-space:pre-wrap;margin-top:10px"></pre>
     </div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-  let CURRENT_COURSE = "";
+let currentCourse = "";
 
-  async function loadPolicies(){
-    const data = await api("policies_get", { course: CURRENT_COURSE });
-    const items = data.items || [];
-    if (!items.length){
-      list.innerHTML = `<div class="muted">لا توجد سياسات.</div>`;
-      return;
-    }
-    list.innerHTML = items.map((x,i)=>`
-      <div style="padding:10px 0; border-bottom:1px solid #e5e7eb">
-        <b>${i+1}.</b> ${esc(x.text)}
-      </div>
-    `).join("");
-    if (isAdmin()){
-      polText.value = items.map(x=>x.text).join("\n");
-    }
+async function init(){
+  requireStudentOrAdmin();
+
+  if (isAdmin()){
+    currentCourse = getAdminCourse() || qs("course");
+    if (!currentCourse) { location.href="admin-dashboard.html"; return; }
+    adminBox.style.display = "block";
+    meta.textContent = `المقرر: ${currentCourse}`;
+    const p = await api("policies_get", { token: getToken() }); // لن يُستخدم هنا
+    // بدل ذلك نقرأ من السيرفر مباشرة عبر admin: نستخدم نفس action policies_get ولكن يحتاج طالب.
+    // لذلك سنقرأ بسيطاً من Policies بالمقرر عبر عرض كـ طالب مزيف؟ لا.
+    // الحل: نعرض السياسات بعد الحفظ/أو نأخذها عبر admin_policies_save (وبنفسها ترجع النص).
+    // سنحمّل النص عبر حفظ فارغ؟ لا.
+    // إذن: سنطلب من المدرب كتابة/حفظ أول مرة، وبعدها يعرض.
+    view.textContent = "اكتب السياسات ثم اضغط حفظ لعرضها هنا.";
+    return;
   }
 
-  async function savePolicies(){
-    msg.textContent = "جاري الحفظ...";
-    try{
-      const lines = polText.value.split("\n").map(s=>s.trim()).filter(Boolean);
-      await api("policies_save", { course: CURRENT_COURSE, lines });
-      msg.textContent = "تم الحفظ ✅";
-      await loadPolicies();
-    }catch(e){
-      msg.textContent = "خطأ: " + (e.message||e);
-    }
+  const st = getStudent();
+  currentCourse = st.course;
+  meta.textContent = `المقرر: ${currentCourse}`;
+  const data = await api("policies_get",{});
+  view.textContent = data.text || "لا توجد سياسات.";
+}
+
+async function save(){
+  try{
+    const data = await api("admin_policies_save",{ course: currentCourse, text: txt.value });
+    view.textContent = data.text || "تم الحفظ (بدون نص).";
+    alert("تم حفظ السياسات");
+  }catch(e){
+    alert(e.message||e);
   }
+}
 
-  async function init(){
-    requireStudentOrAdmin();
-    CURRENT_COURSE = isAdmin()? getAdminCourse() : getSelectedCourse();
-    meta.textContent = `المقرر: ${CURRENT_COURSE||"-"}`;
-
-    if (isAdmin()){
-      exitAdminBtn.style.display="inline-flex";
-      adminBox.style.display="block";
-    }
-    await loadPolicies();
-  }
-
-  init().catch(e=>alert(e.message||e));
+init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

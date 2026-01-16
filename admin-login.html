@@ -31,7 +31,6 @@
   </div>
 </div>
 
-<script src="assets/app.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
@@ -65,6 +64,8 @@
     try{ await signOut(auth); }catch(_){}
     localStorage.removeItem("firebase_token");
     localStorage.removeItem("mode");
+    localStorage.removeItem("admin_course");
+    localStorage.removeItem("admin_section");
     msg.textContent = "تم مسح دخول المدرب.";
   };
 </script>

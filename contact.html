@@ -1,42 +1,47 @@
-<!doctype html><html lang="ar" dir="rtl">
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <link rel="stylesheet" href="assets/style.css"/>
   <title>التواصل مع المدرب</title>
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <a class="btn" href="dashboard.html">رجوع</a>
-      <div class="brand">التواصل مع المدرب</div>
-      <button class="btn" onclick="logout()">خروج</button>
-    </div>
-
-    <div class="card">
-      <div class="h2">طرق التواصل</div>
-      <div class="muted">يتم ضبطها من لوحة المدير (Settings).</div>
-      <hr/>
-      <div class="grid">
-        <a id="wa" class="btn primary" target="_blank">واتساب</a>
-        <a id="mail" class="btn" target="_blank">البريد الإلكتروني</a>
-      </div>
-      <div id="msg" class="msg"></div>
-    </div>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">التواصل مع المدرب</div>
+    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
-  <script src="assets/app.js"></script>
-  <script>
-    requireLogin();
+  <div class="card">
+    <div id="meta" class="muted"></div>
+    <div id="box" style="margin-top:12px"></div>
+  </div>
+</div>
 
-    // لا توجد API لجلب settings للطالب حفاظًا على البساطة.
-    // لذلك سنضع روابط ثابتة هنا أو تعدلها يدويًا.
-    // إذا تبغى نجعلها من الشيت تلقائيًا أضيف لك endpoint سريع في السكربت.
-
-    const whatsapp = "9665XXXXXXXXX"; // عدلها
-    const email = "your@email.com";   // عدله
-
-    document.getElementById("wa").href = "https://wa.me/" + whatsapp;
-    document.getElementById("mail").href = "mailto:" + email;
-  </script>
-</body></html>
+<script src="assets/app.js"></script>
+<script>
+  async function init(){
+    requireStudentOrAdmin();
+    const course = isAdmin()? getAdminCourse() : getSelectedCourse();
+    meta.textContent = `المقرر: ${course||"-"}`;
+    const data = await api("settings_get", {});
+    const email = data.settings["trainer_email_"+course] || data.settings["trainer_email"] || "thakerg@tvtc.gov.sa";
+    const phone = data.settings["trainer_phone_"+course] || data.settings["trainer_phone"] || "00966573727894";
+    box.innerHTML = `
+      <div class="row">
+        <div class="card" style="flex:1">
+          <div class="h2">البريد</div>
+          <div><a class="btn primary" href="mailto:${esc(email)}">${esc(email)}</a></div>
+        </div>
+        <div class="card" style="flex:1">
+          <div class="h2">الجوال</div>
+          <div>${phone ? `<a class="btn primary" href="tel:${esc(phone)}">${esc(phone)}</a>` : `<div class="muted">غير محدد</div>`}</div>
+        </div>
+      </div>
+    `;
+  }
+  init().catch(e=>alert(e.message||e));
+</script>
+</body>
+</html>

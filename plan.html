@@ -15,7 +15,7 @@
 
     <div class="card">
       <div class="h2" id="title"></div>
-      <div class="muted">تعتمد الخطة على تبويب Plan في الشيت الأساسي.</div>
+      <div class="muted">تعتمد الخطة على تبويب Plan في الشيت الأساسي، مع عمود course_code.</div>
     </div>
 
     <div class="card" id="content"></div>
@@ -32,30 +32,25 @@
         const data = await api("plan_get",{ course_code: course });
         const rows = data.rows || [];
         if(!rows.length){
-          document.getElementById("content").innerHTML = `<div class="muted">لا توجد خطة مضافة.</div>`;
+          document.getElementById("content").innerHTML = `<div class="muted">لا توجد خطة لهذا المقرر. تأكد من تعبئة course_code في تبويب Plan.</div>`;
           return;
         }
 
-        const headers = ["الأسبوع التدريبي","ساعات التدريب","استراتيجية التدريب المستخدمة","آلية التقييم","درجة التقييم","الأهداف التفصيلية"];
-        const html = `
+        // اعرض كل الأعمدة الموجودة (ما عدا course_code) بشكل مرن
+        const headers = Object.keys(rows[0]).filter(h => h !== "course_code");
+
+        document.getElementById("content").innerHTML = `
           <table class="table">
-            <thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+            <thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead>
             <tbody>
               ${rows.map(r=>`
                 <tr>
-                  <td>${esc(r["الأسبوع التدريبي"]||"")}</td>
-                  <td>${esc(r["ساعات التدريب"]||"")}</td>
-                  <td>${esc(r["استراتيجية التدريب المستخدمة"]||"")}</td>
-                  <td>${esc(r["آلية التقييم"]||"")}</td>
-                  <td>${esc(r["درجة التقييم"]||"")}</td>
-                  <td>${esc(r["الأهداف التفصيلية"]||"")}</td>
+                  ${headers.map(h=>`<td>${esc(r[h] ?? "")}</td>`).join("")}
                 </tr>
               `).join("")}
             </tbody>
           </table>
         `;
-        document.getElementById("content").innerHTML = html;
-
       }catch(e){
         document.getElementById("content").innerHTML = `<div class="msg err">${e.message}</div>`;
       }

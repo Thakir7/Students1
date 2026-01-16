@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>سجل الدرجات</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -10,10 +10,7 @@
 <div class="container">
   <div class="topbar">
     <div class="brand">سجل الدرجات</div>
-    <div class="actions">
-      <a class="btn" href="dashboard.html">رجوع</a>
-      <button class="btn" style="display:none" id="exitAdminBtn" onclick="exitAdmin()">خروج المدرب</button>
-    </div>
+    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
   <div class="card">
@@ -24,26 +21,24 @@
 
 <script src="assets/app.js"></script>
 <script>
+  const meta = document.getElementById("meta");
+  const tbl = document.getElementById("tbl");
+
   async function init(){
     requireStudentOrAdmin();
 
-    const modeAdmin = isAdmin();
-    if (modeAdmin){
-      exitAdminBtn.style.display = "inline-flex";
-      const course = getAdminCourse();
-      const section = getAdminSection();
-      meta.textContent = `عرض المدرب — المقرر: ${course||"-"} | الشعبة: ${section||"-"}`;
-      const data = await api("admin_grades_sheet", { section });
-      renderTable(tbl, data.rows, { title: "درجات جميع المتدربين" });
+    if(isAdmin()){
+      const course = qs("course") || localStorage.getItem("admin_course") || "";
+      const section = qs("section") || localStorage.getItem("admin_section") || "";
+      const data = await api("admin_grades_sheet", { course, section });
+      meta.textContent = `عرض للمدرب: المقرر ${course} | الشعبة ${section}`;
+      tbl.innerHTML = renderTable(data.rows || []);
       return;
     }
 
-    const st = getStudent();
-    const course = getSelectedCourse();
-    const section = getSelectedSection();
-    meta.textContent = `المقرر: ${course||"-"} | الشعبة: ${section||"-"} | المتدرب: ${st.name||""}`;
-    const data = await api("grades_get", { section });
-    renderTable(tbl, data.rows, { title: "درجاتك" });
+    const data = await api("grades_get", {});
+    meta.textContent = `عرض للمتدرب: المقرر ${data.course_code || ""} | الشعبة ${data.section || ""}`;
+    tbl.innerHTML = renderTable(data.rows || []);
   }
 
   init().catch(e=>alert(e.message||e));

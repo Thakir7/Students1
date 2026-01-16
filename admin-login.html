@@ -1,0 +1,57 @@
+<!doctype html><html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="assets/style.css"/>
+  <title>دخول المدرب / المدير</title>
+</head>
+<body>
+  <div class="container" style="max-width:420px;margin-top:70px">
+    <div class="card">
+      <div class="h2">دخول المدرب / المدير</div>
+      <div class="muted">الدخول عبر Firebase (آمن واحترافي)</div>
+      <hr/>
+      <input id="email" class="input" placeholder="البريد الإلكتروني" autocomplete="username">
+      <input id="password" type="password" class="input" placeholder="كلمة المرور" autocomplete="current-password">
+      <button class="btn primary" onclick="doLogin()">دخول</button>
+      <div id="msg" class="msg"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+
+    // ✅ ضع apiKey الحقيقي هنا
+    const firebaseConfig = {
+      apiKey: "AIzaSyB99dmAbCJclwyipiM3f7pm9M1tofL6nZU",
+      authDomain: "students1-bb615.firebaseapp.com",
+      projectId: "students1-bb615",
+      storageBucket: "students1-bb615.firebasestorage.app",
+      messagingSenderId: "814840688419",
+      appId: "1:814840688419:web:85a568e6969d2f4eca2696"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const msg = document.getElementById("msg");
+    const emailEl = document.getElementById("email");
+    const passEl  = document.getElementById("password");
+
+    window.doLogin = async function(){
+      msg.className="msg"; msg.textContent="";
+      try{
+        const cred = await signInWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
+        const token = await cred.user.getIdToken(true);
+        localStorage.setItem("firebase_token", token);
+        localStorage.setItem("is_admin", "1");
+        location.href = "admin.html";
+      }catch(e){
+        msg.className="msg err";
+        msg.textContent = "فشل تسجيل الدخول. تأكد من البريد وكلمة المرور.";
+      }
+    }
+  </script>
+</body>
+</html>

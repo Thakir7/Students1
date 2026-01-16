@@ -1,68 +1,140 @@
-<!doctype html><html lang="ar" dir="rtl">
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <link rel="stylesheet" href="assets/style.css"/>
-  <title>لوحة المدير</title>
-  <script>
-    if (!localStorage.getItem("firebase_token")) location.href="admin-login.html";
-  </script>
+  <title>لوحة المدرب</title>
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <div class="brand">لوحة المدير / المدرب</div>
-      <button class="btn" onclick="adminLogout()">تسجيل خروج</button>
-    </div>
-
-    <div class="card">
-      <div class="h2">اختيار المقرر</div>
-      <div class="row" style="margin-top:10px">
-        <select id="courseSel" class="input"></select>
-        <button class="btn primary" onclick="openServices()">فتح خدمات المقرر</button>
-      </div>
-      <div class="muted" style="margin-top:8px">اختر المقرر ثم افتح أي خدمة من الأسفل</div>
-    </div>
-
-    <div class="card">
-      <div class="h2">الخدمات</div>
-      <div class="grid2" style="margin-top:10px">
-        <button class="btn big" onclick="go('policies')">سياسات المقرر التدريبي</button>
-        <button class="btn big" onclick="go('plan')">خطة المقرر</button>
-        <button class="btn big" onclick="go('attendance')">سجل الحضور والغياب</button>
-        <button class="btn big" onclick="go('grades')">سجل الدرجات</button>
-        <button class="btn big" onclick="go('calendar')">التقويم الدراسي</button>
-        <button class="btn big" onclick="go('contact')">التواصل</button>
-      </div>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">لوحة المدرب</div>
+    <div class="actions">
+      <button class="btn" onclick="exitAdmin()">خروج المدرب</button>
     </div>
   </div>
 
-  <script src="assets/app.js"></script>
-  <script>
-    // لا نستخدم requireLogin() هنا لأن هذه لوحة مدير وليست متدرب
+  <div class="card">
+    <div class="h2">اختيار المقرر والشعبة</div>
+    <div class="row" style="margin-top:12px">
+      <select id="courseSel"></select>
+      <select id="sectionSel"></select>
+      <button class="btn primary" onclick="applySel()">تطبيق</button>
+    </div>
 
-    async function loadCourses(){
-      const sel = document.getElementById("courseSel");
-      sel.innerHTML = "<option>جاري التحميل...</option>";
-      const data = await api("admin_courses", {});
-      sel.innerHTML = data.courses.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    <div id="meta" class="muted" style="margin-top:10px"></div>
+
+    <div class="grid">
+      <a class="tile" href="policies.html"><div class="t">سياسات المقرر</div><div class="d">إضافة/تعديل + عرض للطلاب</div></a>
+      <a class="tile" href="plan.html"><div class="t">خطة المقرر</div><div class="d">حسب المقرر</div></a>
+      <a class="tile" href="attendance.html"><div class="t">سجل الحضور</div><div class="d">حسب الشعبة</div></a>
+      <a class="tile" href="grades.html"><div class="t">سجل الدرجات</div><div class="d">حسب الشعبة</div></a>
+      <a class="tile" href="contact.html"><div class="t">بيانات التواصل</div><div class="d">من Settings</div></a>
+      <a class="tile" href="calendar.html"><div class="t">التقويم</div><div class="d">عرض التقويم</div></a>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="h2">التذكيرات (حسب المقرر)</div>
+    <div class="muted">أضف تذكير مع وقت نهاية، يظهر للمتدرب باللون الأحمر، وإذا انتهى الوقت يظهر بخط في الوسط.</div>
+
+    <div class="row" style="margin-top:12px">
+      <input id="rTitle" class="input" placeholder="عنوان التذكير">
+      <input id="rDue" class="input" type="datetime-local">
+    </div>
+    <div class="row" style="margin-top:12px">
+      <input id="rNote" class="input" placeholder="ملاحظة (اختياري)">
+      <button class="btn primary" onclick="addReminder()">إضافة</button>
+    </div>
+
+    <div id="rMsg" class="muted" style="margin-top:10px"></div>
+    <div id="rList" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+  let ALL = { courses: [] };
+
+  async function init(){
+    requireAdmin();
+    const data = await api("admin_courses", {});
+    ALL = data;
+
+    const courseCodes = [...new Set((data.courses||[]).map(x=>x.course_code).filter(Boolean))];
+    courseSel.innerHTML = courseCodes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+
+    const curCourse = getAdminCourse() || courseCodes[0] || "";
+    courseSel.value = curCourse;
+
+    function fillSections(){
+      const c = courseSel.value;
+      const sections = (data.courses||[]).filter(x=>x.course_code===c).map(x=>x.section).filter(Boolean);
+      const uniq = [...new Set(sections)];
+      sectionSel.innerHTML = uniq.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
+      const curS = getAdminSection();
+      sectionSel.value = uniq.includes(curS) ? curS : (uniq[0]||"");
     }
+    fillSections();
+    courseSel.addEventListener("change", fillSections);
 
-    function openServices(){
-      const c = document.getElementById("courseSel").value;
-      localStorage.setItem("admin_course", c);
-      alert("تم اختيار المقرر: " + c + " ✅\nالآن افتح أي خدمة من الأسفل.");
+    applySel(false);
+  }
+
+  async function applySel(alertUser=true){
+    setAdminCourseSection(courseSel.value, sectionSel.value);
+    meta.textContent = `المقرر: ${courseSel.value||"-"} | الشعبة: ${sectionSel.value||"-"}`;
+    if (alertUser) alert("تم تحديد المقرر/الشعبة للعرض في الصفحات.");
+    await loadReminders();
+  }
+
+  async function loadReminders(){
+    rList.innerHTML = "";
+    const course = courseSel.value;
+    if (!course) return;
+    const data = await api("reminders_get", { course });
+    const items = data.items || [];
+    if (!items.length){
+      rList.innerHTML = `<div class="muted">لا توجد تذكيرات.</div>`;
+      return;
     }
+    rList.innerHTML = items.map(x=>{
+      const cls = x.done ? "rem done":"rem";
+      return `
+        <div class="${cls}">
+          <div class="title">${esc(x.title)}</div>
+          <div class="when">${esc(x.due_text||"")}</div>
+          <div class="muted" style="margin-top:6px">${esc(x.note||"")}</div>
+        </div>
+      `;
+    }).join("");
+  }
 
-    function go(page){
-      const c = localStorage.getItem("admin_course") || document.getElementById("courseSel").value;
-      if(!c) return alert("اختر المقرر أولاً");
-      location.href = `admin-${page}.html?course=${encodeURIComponent(c)}`;
+  async function addReminder(){
+    rMsg.textContent = "جاري الإضافة...";
+    try{
+      const course = courseSel.value;
+      const due = rDue.value;
+      if (!course) throw new Error("اختر المقرر");
+      if (!rTitle.value.trim()) throw new Error("اكتب عنوان التذكير");
+      if (!due) throw new Error("اختر وقت النهاية");
+
+      await api("reminder_add", {
+        course,
+        title: rTitle.value.trim(),
+        due_iso: new Date(due).toISOString(),
+        note: rNote.value.trim()
+      });
+
+      rTitle.value=""; rNote.value=""; rMsg.textContent="تمت الإضافة ✅";
+      await loadReminders();
+    }catch(e){
+      rMsg.textContent = "خطأ: " + (e.message||e);
     }
+  }
 
-    function esc(s){ return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-
-    loadCourses();
-  </script>
+  init().catch(e=>alert(e.message||e));
+</script>
 </body>
 </html>

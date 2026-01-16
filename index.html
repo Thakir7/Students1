@@ -1,44 +1,63 @@
-<!doctype html><html lang="ar" dir="rtl">
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <link rel="stylesheet" href="assets/style.css"/>
-  <title>تسجيل الدخول</title>
+  <title>بوابة المتدرب</title>
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <div class="h1">تسجيل الدخول</div>
-      <div class="muted">اسم المستخدم: الرقم التدريبي — كلمة المرور: آخر 4 أرقام من الهوية</div>
-      <hr/>
-      <div class="row">
-        <input id="u" class="input" placeholder="الرقم التدريبي">
-        <input id="p" class="input" type="password" placeholder="آخر 4 أرقام من الهوية">
-      </div>
-      <div style="margin-top:10px">
-        <button id="btn" class="btn primary">دخول</button>
-      </div>
-      <div id="msg" class="msg"></div>
-    </div>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">بوابة المتدرب</div>
+    <div class="actions"></div>
   </div>
 
-  <script src="assets/app.js"></script>
-  <script>
-    document.getElementById("btn").onclick = async () => {
-      const trainee_id = document.getElementById("u").value.trim();
-      const password = document.getElementById("p").value.trim();
-      const msg = document.getElementById("msg");
-      msg.className="msg";
-      msg.textContent="";
+  <div class="card">
+    <div class="h2">تسجيل دخول المتدرب</div>
+    <div class="muted">الرقم التدريبي + آخر 4 أرقام من الهوية</div>
 
-      try{
-        const data = await api("login",{ trainee_id, password });
-        saveSession(data);
-        location.href="dashboard.html";
-      }catch(e){
-        msg.className="msg err";
-        msg.textContent=e.message;
+    <div class="row" style="margin-top:12px">
+      <input id="tid" class="input" inputmode="numeric" placeholder="الرقم التدريبي">
+      <input id="pw" class="input" inputmode="numeric" placeholder="آخر 4 أرقام من الهوية">
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" onclick="login()">دخول</button>
+    </div>
+
+    <div id="msg" class="muted" style="margin-top:12px"></div>
+
+    <div style="margin-top:14px; display:none" id="adminLinkBox">
+      <a class="btn" href="admin-login.html">دخول المدرب</a>
+      <div class="muted" style="margin-top:6px">يظهر فقط إذا فتحت الصفحة مع ?admin=1</div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+  if (new URLSearchParams(location.search).get("admin")==="1"){
+    document.getElementById("adminLinkBox").style.display="block";
+  }
+
+  async function login(){
+    msg.textContent = "جاري التحقق...";
+    try{
+      const data = await api("student_login", {
+        trainee_id: tid.value.trim(),
+        password: pw.value.trim()
+      });
+      saveSession(data);
+      // اختيار أول مقرر/شعبة افتراضيًا
+      if (data.student.courses?.length){
+        setSelectedCourseSection(data.student.courses[0].course_code, data.student.courses[0].section);
       }
-    };
-  </script>
-</body></html>
+      location.href = "dashboard.html";
+    }catch(e){
+      msg.textContent = "فشل الدخول: " + (e.message || e);
+    }
+  }
+</script>
+</body>
+</html>

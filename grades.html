@@ -32,7 +32,7 @@
   async function init(){
     requireStudentOrAdmin();
 
-    // ✅ وضع المدرب
+    // ✅ وضع المدرب: يعرض درجات جميع المتدربين
     if(isAdmin()){
       const course = qs("course") || localStorage.getItem("admin_course") || "";
       const section = qs("section") || localStorage.getItem("admin_section") || "";
@@ -42,9 +42,9 @@
       return;
     }
 
-    // ✅ وضع المتدرب
+    // ✅ وضع المتدرب: يعرض درجاته فقط
     const data = await api("grades_get", {});
-    meta.textContent = `المقرر: ${data.course_code || "-"} | الشعبة: ${data.section || "-"} | درجة المتدرب:`;
+    meta.textContent = `المقرر: ${data.course_code || "-"} | الشعبة: ${data.section || "-"} | درجات المتدرب:`;
     renderRows(data.rows || []);
   }
 

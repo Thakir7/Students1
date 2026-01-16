@@ -10,7 +10,7 @@ function getStudent(){ return JSON.parse(localStorage.getItem("student")||"null"
 function logout(){
   localStorage.removeItem("token");
   localStorage.removeItem("student");
-  localStorage.removeItem("admin_ok");
+  localStorage.removeItem("firebase_token");
   location.href = "index.html";
 }
 function requireLogin(){
@@ -18,14 +18,14 @@ function requireLogin(){
 }
 
 async function api(action, payload={}){
-  // إرسال JSON كنص plain لتفادي CORS preflight
-  const body = JSON.stringify({ action, token:getToken(), ...payload });
-
-  const res = await fetch(API_URL, {
-    method:"POST",
-    body
+  const body = JSON.stringify({
+    action,
+    token: getToken(),
+    firebase_token: localStorage.getItem("firebase_token"), // ✅ توكن Firebase للمدير
+    ...payload
   });
 
+  const res = await fetch(API_URL, { method:"POST", body });
   const data = await res.json().catch(()=>({ok:false, message:"فشل قراءة الرد"}));
   if (!data || data.ok === false) throw new Error(data.message || "خطأ غير معروف");
   return data;

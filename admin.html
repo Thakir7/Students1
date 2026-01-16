@@ -1,9 +1,108 @@
-<!doctype html><html lang="ar" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>وضع المدرب</title></head>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>لوحة المدرب</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
 <body>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">لوحة المدرب</div>
+    <div class="actions">
+      <button class="btn" onclick="exitAdminMode()">خروج</button>
+      <a class="btn" href="dashboard.html">الواجهة</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">اختيار المقرر والشعبة</h3>
+    <div class="muted" style="margin-bottom:10px">اختر المقرر ثم الشعبة، ثم اضغط حفظ.</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end">
+      <div>
+        <label class="muted">المقرر</label>
+        <select id="courseSel" class="input"></select>
+      </div>
+      <div>
+        <label class="muted">الشعبة</label>
+        <select id="sectionSel" class="input"></select>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn primary" id="saveBtn">حفظ الاختيار</button>
+      <a class="btn" id="openGrades" href="grades.html">فتح الدرجات</a>
+      <a class="btn" id="openAttendance" href="attendance.html">فتح الحضور</a>
+    </div>
+
+    <div id="status" class="muted" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
 <script>
-  if (!localStorage.getItem("firebase_token")) location.href="admin-login.html";
-  localStorage.setItem("mode","admin");
-  location.href="dashboard.html";
+  function setSections(course, sectionsByCourse){
+    const secs = (sectionsByCourse[course] || []).slice();
+    if(!secs.length) secs.push("1"); // احتياط
+    sectionSel.innerHTML = secs.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
+  }
+
+  async function init(){
+    if(!isAdmin()) location.href="Index.html";
+
+    // جلب قائمة المقررات/الشعب من الشيتات تلقائياً
+    // ✅ يعتمد على Code.gs (action=admin_discovery) — إذا لم تكن موجودة لديك قلّي وأضيفها
+    let discovery;
+    try{
+      discovery = await api("admin_discovery", {});
+    }catch(e){
+      status.textContent = "تعذر قراءة قائمة المقررات تلقائيًا. (أرسل لي الخطأ إن ظهر)";
+      throw e;
+    }
+
+    const courses = discovery.courses || [];
+    const sectionsByCourse = discovery.sectionsByCourse || {};
+
+    courseSel.innerHTML = courses.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+
+    const savedCourse = localStorage.getItem("admin_course") || courses[0] || "";
+    courseSel.value = savedCourse;
+
+    setSections(savedCourse, sectionsByCourse);
+
+    const savedSection = localStorage.getItem("admin_section") || sectionSel.value || "";
+    // sectionSel قائمة أرقام/نصوص (2/3..)
+    if(savedSection) sectionSel.value = savedSection;
+
+    courseSel.addEventListener("change", ()=>{
+      setSections(courseSel.value, sectionsByCourse);
+    });
+
+    function updateLinks(){
+      const c = courseSel.value;
+      const s = sectionSel.value;
+      openGrades.href = `grades.html?course=${encodeURIComponent(c)}&section=${encodeURIComponent(s)}`;
+      openAttendance.href = `attendance.html?course=${encodeURIComponent(c)}&section=${encodeURIComponent(s)}`;
+    }
+    updateLinks();
+    courseSel.addEventListener("change", updateLinks);
+    sectionSel.addEventListener("change", updateLinks);
+
+    saveBtn.onclick = ()=>{
+      const c = courseSel.value;
+      const s = sectionSel.value;
+      localStorage.setItem("admin_course", c);
+      localStorage.setItem("admin_section", s);
+      status.textContent = `تم الحفظ: المقرر ${c} | الشعبة ${s}`;
+      updateLinks();
+    };
+
+    status.textContent = `محدد حاليًا: ${courseSel.value} | ${sectionSel.value}`;
+  }
+
+  init().catch(e=>alert(e.message||e));
 </script>
-</body></html>
+</body>
+</html>

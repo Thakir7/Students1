@@ -111,3 +111,7 @@ body{
   .grid2{grid-template-columns:1fr}
   .table{min-width:900px}
 }
+
+.rem{ padding:12px; border:1px solid #eee; border-radius:12px; margin-bottom:10px; }
+.remTitle{ font-weight:700; color:#c1121f; }
+.rem.expired .remTitle{ text-decoration: line-through; opacity:.7; }

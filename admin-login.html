@@ -24,13 +24,14 @@
 
     <div class="row" style="margin-top:12px">
       <button class="btn primary" onclick="login()">دخول</button>
-      <button class="btn" onclick="clearAdmin()">مسح الدخول</button>
+      <button class="btn" onclick="logout()">مسح الدخول</button>
     </div>
 
     <div id="msg" class="muted" style="margin-top:12px"></div>
   </div>
 </div>
 
+<script src="assets/app.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
@@ -56,17 +57,18 @@
       localStorage.setItem("firebase_token", token);
       localStorage.setItem("mode", "admin");
 
-      location.href = "admin-dashboard.html"; // ✅ الصحيح عندك
+      // تحقق من السيرفر (admin_login)
+      await api("admin_login", {});
+
+      location.href = "admin-dashboard.html";
     }catch(e){
       msg.textContent = "فشل الدخول: " + (e?.message || e);
     }
   };
 
-  window.clearAdmin = async function(){
+  window.logout = async function(){
     try{ await signOut(auth); }catch(_){}
-    localStorage.removeItem("firebase_token");
-    localStorage.removeItem("mode");
-    msg.textContent = "تم مسح دخول المدرب.";
+    exitAdminMode();
   };
 </script>
 </body>

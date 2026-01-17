@@ -12,26 +12,27 @@
     <div class="brand">سياسات المقرر التدريبي</div>
     <div class="actions">
       <a class="btn" href="dashboard.html">رجوع</a>
-      <button class="btn danger" onclick="isAdmin()?exitAdminMode():logoutStudent()">خروج</button>
+      <button class="btn" onclick="logoutAdmin()" id="adminBtn" style="display:none">خروج المدرب</button>
     </div>
   </div>
 
   <div class="card">
     <div id="meta" class="muted"></div>
 
-    <div id="adminBox" style="display:none; margin-top:12px">
+    <div id="studentView" style="display:none;margin-top:12px">
+      <div class="h2">السياسات</div>
+      <div id="policyText" class="muted" style="white-space:pre-wrap;margin-top:10px"></div>
+    </div>
+
+    <div id="adminView" style="display:none;margin-top:12px">
       <div class="h2">إضافة/تعديل السياسات (للمدرب)</div>
-      <div class="muted">اكتب كل سياسة في سطر مستقل ثم حفظ.</div>
-      <textarea id="txt" class="input" placeholder="اكتب السياسات هنا..."></textarea>
+      <div class="muted">اكتب كل سياسة في سطر مستقل ثم اضغط حفظ.</div>
+      <textarea id="txt" class="input" style="height:240px;margin-top:12px"></textarea>
       <div class="row" style="margin-top:12px">
         <button class="btn primary" onclick="save()">حفظ</button>
       </div>
       <div id="msg" class="muted" style="margin-top:10px"></div>
-      <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
     </div>
-
-    <div class="h2">عرض السياسات</div>
-    <div id="view" class="muted" style="white-space:pre-wrap"></div>
   </div>
 </div>
 
@@ -40,31 +41,31 @@
 async function init(){
   requireStudentOrAdmin();
 
-  if (isAdmin()){
-    adminBox.style.display = "block";
-    const c = localStorage.getItem("admin_course") || "";
-    if (!c) { location.href="admin-dashboard.html"; return; }
+  if(isAdmin()){
+    adminBtn.style.display = "inline-block";
+    adminView.style.display = "block";
 
-    meta.textContent = `لوحة المدرب — المقرر: ${c}`;
-    const data = await api("admin_policies_get", { course_code: c });
-    txt.value = data.text || "";
-    view.textContent = data.text || "لا توجد سياسات";
+    const course = localStorage.getItem("admin_course") || "";
+    const data = await api("admin_policies_get", { course_code: course });
+    meta.textContent = `عرض المدرب — المقرر: ${course||"-"}`;
+    txt.value = (data.text || "");
     return;
   }
 
+  studentView.style.display = "block";
   const data = await api("policies_get", {});
-  meta.textContent = `المقرر: ${data.course_code}`;
-  view.textContent = data.text || "لا توجد سياسات";
+  meta.textContent = `عرض متدرب — المقرر: ${data.course_code||"-"}`;
+  policyText.textContent = data.text || "لا توجد سياسات بعد.";
 }
 
 async function save(){
+  msg.textContent = "جاري الحفظ...";
   try{
-    const c = localStorage.getItem("admin_course") || "";
-    await api("admin_policies_set", { course_code: c, text: txt.value });
-    msg.textContent = "تم الحفظ.";
-    view.textContent = txt.value || "لا توجد سياسات";
+    const course = localStorage.getItem("admin_course") || "";
+    await api("admin_policies_set", { course_code: course, text: txt.value });
+    msg.textContent = "تم الحفظ ✅";
   }catch(e){
-    msg.textContent = e.message || String(e);
+    msg.textContent = e.message || e;
   }
 }
 

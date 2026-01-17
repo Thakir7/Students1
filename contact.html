@@ -1,47 +1,43 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>التواصل مع المدرب</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>التواصل</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <div class="container">
   <div class="topbar">
-    <div class="brand">التواصل مع المدرب</div>
-    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
+    <div class="brand">التواصل</div>
+    <div class="actions">
+      <a class="btn" href="dashboard.html" id="b1">رجوع</a>
+      <a class="btn" href="admin-dashboard.html?v=4" id="b2" style="display:none">رجوع</a>
+    </div>
   </div>
 
   <div class="card">
-    <div id="meta" class="muted"></div>
-    <div id="box" style="margin-top:12px"></div>
+    <div class="h2">طرق التواصل</div>
+    <div class="muted" id="m"></div>
+    <div style="margin-top:12px">
+      <a class="btn primary" href="mailto:thakerg@tvtc.gov.sa">إرسال بريد للمدرب</a>
+    </div>
   </div>
 </div>
 
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=4"></script>
 <script>
-  async function init(){
-    requireStudentOrAdmin();
-    const course = isAdmin()? getAdminCourse() : getSelectedCourse();
-    meta.textContent = `المقرر: ${course||"-"}`;
-    const data = await api("settings_get", {});
-    const email = data.settings["trainer_email_"+course] || data.settings["trainer_email"] || "thakerg@tvtc.gov.sa";
-    const phone = data.settings["trainer_phone_"+course] || data.settings["trainer_phone"] || "00966573727894";
-    box.innerHTML = `
-      <div class="row">
-        <div class="card" style="flex:1">
-          <div class="h2">البريد</div>
-          <div><a class="btn primary" href="mailto:${esc(email)}">${esc(email)}</a></div>
-        </div>
-        <div class="card" style="flex:1">
-          <div class="h2">الجوال</div>
-          <div>${phone ? `<a class="btn primary" href="tel:${esc(phone)}">${esc(phone)}</a>` : `<div class="muted">غير محدد</div>`}</div>
-        </div>
-      </div>
-    `;
-  }
-  init().catch(e=>alert(e.message||e));
+  (function(){
+    if(isAdmin()){
+      b1.style.display="none";
+      b2.style.display="";
+      m.textContent = "أنت داخل كمدرب. يمكنك التواصل عبر البريد.";
+    }else{
+      requireStudentOrAdmin();
+      const s = getStudent() || {};
+      m.textContent = `المتدرب: ${s.name||"-"} | المقرر: ${s.course||"-"} | الشعبة: ${s.section||"-"}`;
+    }
+  })();
 </script>
 </body>
 </html>

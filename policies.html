@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>سياسات المقرر</title>
+  <title>سياسات المقرر التدريبي</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -12,65 +12,59 @@
     <div class="brand">سياسات المقرر التدريبي</div>
     <div class="actions">
       <a class="btn" href="dashboard.html">رجوع</a>
-      <button class="btn" onclick="isAdmin()?logoutAdmin():logoutStudent()">خروج</button>
+      <button class="btn danger" onclick="isAdmin()?exitAdminMode():logoutStudent()">خروج</button>
     </div>
   </div>
 
   <div class="card">
     <div id="meta" class="muted"></div>
 
-    <div id="adminBox" style="display:none;margin-top:12px">
+    <div id="adminBox" style="display:none; margin-top:12px">
       <div class="h2">إضافة/تعديل السياسات (للمدرب)</div>
       <div class="muted">اكتب كل سياسة في سطر مستقل ثم حفظ.</div>
-      <textarea id="txt" class="input" style="margin-top:10px"></textarea>
-      <div class="row" style="margin-top:10px">
+      <textarea id="txt" class="input" placeholder="اكتب السياسات هنا..."></textarea>
+      <div class="row" style="margin-top:12px">
         <button class="btn primary" onclick="save()">حفظ</button>
       </div>
+      <div id="msg" class="muted" style="margin-top:10px"></div>
+      <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
     </div>
 
-    <div style="margin-top:14px">
-      <div class="h2">عرض السياسات</div>
-      <pre id="view" class="card" style="white-space:pre-wrap;margin-top:10px"></pre>
-    </div>
+    <div class="h2">عرض السياسات</div>
+    <div id="view" class="muted" style="white-space:pre-wrap"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-let currentCourse = "";
-
 async function init(){
   requireStudentOrAdmin();
 
   if (isAdmin()){
-    currentCourse = getAdminCourse() || qs("course");
-    if (!currentCourse) { location.href="admin-dashboard.html"; return; }
     adminBox.style.display = "block";
-    meta.textContent = `المقرر: ${currentCourse}`;
-    const p = await api("policies_get", { token: getToken() }); // لن يُستخدم هنا
-    // بدل ذلك نقرأ من السيرفر مباشرة عبر admin: نستخدم نفس action policies_get ولكن يحتاج طالب.
-    // لذلك سنقرأ بسيطاً من Policies بالمقرر عبر عرض كـ طالب مزيف؟ لا.
-    // الحل: نعرض السياسات بعد الحفظ/أو نأخذها عبر admin_policies_save (وبنفسها ترجع النص).
-    // سنحمّل النص عبر حفظ فارغ؟ لا.
-    // إذن: سنطلب من المدرب كتابة/حفظ أول مرة، وبعدها يعرض.
-    view.textContent = "اكتب السياسات ثم اضغط حفظ لعرضها هنا.";
+    const c = localStorage.getItem("admin_course") || "";
+    if (!c) { location.href="admin-dashboard.html"; return; }
+
+    meta.textContent = `لوحة المدرب — المقرر: ${c}`;
+    const data = await api("admin_policies_get", { course_code: c });
+    txt.value = data.text || "";
+    view.textContent = data.text || "لا توجد سياسات";
     return;
   }
 
-  const st = getStudent();
-  currentCourse = st.course;
-  meta.textContent = `المقرر: ${currentCourse}`;
-  const data = await api("policies_get",{});
-  view.textContent = data.text || "لا توجد سياسات.";
+  const data = await api("policies_get", {});
+  meta.textContent = `المقرر: ${data.course_code}`;
+  view.textContent = data.text || "لا توجد سياسات";
 }
 
 async function save(){
   try{
-    const data = await api("admin_policies_save",{ course: currentCourse, text: txt.value });
-    view.textContent = data.text || "تم الحفظ (بدون نص).";
-    alert("تم حفظ السياسات");
+    const c = localStorage.getItem("admin_course") || "";
+    await api("admin_policies_set", { course_code: c, text: txt.value });
+    msg.textContent = "تم الحفظ.";
+    view.textContent = txt.value || "لا توجد سياسات";
   }catch(e){
-    alert(e.message||e);
+    msg.textContent = e.message || String(e);
   }
 }
 

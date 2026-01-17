@@ -24,7 +24,7 @@
 
     <div class="row" style="margin-top:12px">
       <button class="btn primary" onclick="login()">دخول</button>
-      <button class="btn" onclick="clearLogin()">مسح</button>
+      <button class="btn" onclick="logout()">مسح الدخول</button>
     </div>
 
     <div id="msg" class="muted" style="margin-top:12px"></div>
@@ -58,20 +58,19 @@
       localStorage.setItem("firebase_token", token);
       localStorage.setItem("mode", "admin");
 
-      // ✅ تحقق من السيرفر (GAS) أن هذا البريد مسموح كمدرب
+      // ✅ تحقق صلاحية الإيميل من Settings/AdminEmail
       await api("admin_login", {});
-
       location.href = "admin-dashboard.html";
     }catch(e){
       msg.textContent = "فشل الدخول: " + (e?.message || e);
     }
   };
 
-  window.clearLogin = async function(){
+  window.logout = async function(){
     try{ await signOut(auth); }catch(_){}
     localStorage.removeItem("firebase_token");
     localStorage.removeItem("mode");
-    msg.textContent = "تم مسح الدخول.";
+    msg.textContent = "تم مسح دخول المدرب.";
   };
 </script>
 </body>

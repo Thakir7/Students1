@@ -3,69 +3,83 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>الرئيسية</title>
+  <title>الصفحة الرئيسية</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <div class="container">
   <div class="topbar">
-    <div class="brand">بوابة المتدرب</div>
+    <div class="brand">الصفحة الرئيسية</div>
     <div class="actions">
-      <button class="btn" onclick="logoutStudent()">تسجيل خروج</button>
+      <button class="btn danger" onclick="logoutStudent()">تسجيل خروج</button>
     </div>
   </div>
 
   <div class="card">
     <div class="h2">بيانات المتدرب</div>
-    <div id="info" class="muted" style="margin-top:8px"></div>
+    <div id="info" class="muted"></div>
   </div>
 
-  <div class="card" style="margin-top:12px">
+  <div class="card">
     <div class="h2">الخدمات</div>
-    <div class="grid" style="margin-top:10px">
-      <a class="btn" href="grades.html">سجل الدرجات</a>
-      <a class="btn" href="attendance.html">سجل الحضور والغياب</a>
-      <a class="btn" href="plan.html">خطة المقرر</a>
-      <a class="btn" href="policies.html">سياسات المقرر التدريبي</a>
-      <a class="btn" href="contact.html">التواصل مع المدرب</a>
-      <a class="btn" href="calendar.html">التقويم الدراسي</a>
+    <div class="grid" style="margin-top:12px">
+      <a class="tile" href="attendance.html">سجل الحضور والغياب</a>
+      <a class="tile" href="grades.html">سجل الدرجات</a>
+      <a class="tile" href="plan.html">خطة المقرر</a>
+      <a class="tile" href="policies.html">سياسات المقرر التدريبي</a>
+      <a class="tile" href="calendar.html">التقويم الدراسي</a>
+      <a class="tile" href="contact.html">التواصل مع المدرب</a>
     </div>
   </div>
 
-  <div class="card" style="margin-top:12px">
-    <div class="h2">التذكيرات (حسب المقرر)</div>
-    <div class="muted">تظهر للمتدرب باللون الأحمر، وإذا انتهى وقتها يتوسطها خط.</div>
-    <div id="remWrap" style="margin-top:10px"></div>
+  <div class="card">
+    <div class="h2">التذكيرات</div>
+    <div class="muted">يظهر التذكير باللون الأحمر، وبعد انتهاء الوقت يظهر عليه خط.</div>
+    <div id="remBox" style="margin-top:12px"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
 async function init(){
-  requireStudent();
-  const st = getStudent();
-  info.innerHTML = `
-    <div><b>${esc(st.name||"")}</b> — الرقم التدريبي: <span class="badge">${esc(st.training_id||"")}</span></div>
-    <div style="margin-top:6px">المقرر: <b>${esc(st.course||"-")}</b> | الشعبة: <b>${esc(st.section||"-")}</b></div>
-  `;
-
-  const data = await api("reminders_get",{});
-  const now = Date.now();
-  if (!data.items || data.items.length===0){
-    remWrap.innerHTML = `<div class="muted">لا توجد تذكيرات.</div>`;
+  requireStudentOrAdmin();
+  if (isAdmin()){
+    // عرض كمتدرب اختياري: يظل يطلب token الطالب، لذلك نرجع للوحة المدرب
+    location.href = "admin-dashboard.html";
     return;
   }
-  remWrap.innerHTML = data.items.map(it=>{
-    const done = it.end_ms && it.end_ms < now;
-    const cls = done ? "rem done" : "rem red";
-    const when = it.end_ms ? new Date(it.end_ms).toLocaleString("ar-SA") : "-";
-    return `<div class="${cls}">
-      <div><b>${esc(it.title||"")}</b></div>
-      <div class="muted">ينتهي: ${esc(when)}</div>
-      ${it.note ? `<div class="muted">${esc(it.note)}</div>` : ""}
-    </div>`;
-  }).join("");
+
+  const me = await api("me", {});
+  const s = me.student;
+
+  info.innerHTML = `
+    <div class="row">
+      <span class="badge">الاسم: ${esc(s.name)}</span>
+      <span class="badge">الرقم التدريبي: ${esc(s.training_id)}</span>
+      <span class="badge">المقرر: ${esc(s.course)}</span>
+      <span class="badge">الشعبة: ${esc(s.section)}</span>
+    </div>
+  `;
+
+  const rem = await api("reminders_get", {});
+  renderReminders(rem.reminders || []);
 }
+
+function renderReminders(list){
+  const now = Date.now();
+  remBox.innerHTML = list.map(item=>{
+    const t = toDateMs(item.ends_at);
+    const expired = t && t < now;
+    const cls = expired ? "rem expired" : "rem active";
+    return `
+      <div class="${cls}">
+        <div class="title">${esc(item.title)}</div>
+        <div class="meta">ينتهي: ${esc(item.ends_at)} ${item.note ? " | " + esc(item.note) : ""}</div>
+      </div>
+    `;
+  }).join("") || '<div class="muted">لا توجد تذكيرات</div>';
+}
+
 init().catch(e=>alert(e.message||e));
 </script>
 </body>

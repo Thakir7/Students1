@@ -16,6 +16,8 @@
     </div>
   </div>
 
+  <div id="selector"></div>
+
   <div class="card">
     <div id="meta" class="muted"></div>
     <div class="tableWrap" id="tbl" style="margin-top:12px"></div>
@@ -35,16 +37,21 @@ function renderRows(rows){
   tbl.innerHTML = `<table class="table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
 }
 
+async function loadAdmin(){
+  const course = getAdminCourse();
+  const section = getAdminSection();
+  const data = await api("admin_grades_get", { course_code: course, section });
+  meta.textContent = `عرض المدرب — المقرر: ${course||"-"} | الشعبة: ${section||"بدون"}`;
+  renderRows(data.rows);
+}
+
 async function init(){
   requireStudentOrAdmin();
 
   if(isAdmin()){
     adminBtn.style.display = "inline-block";
-    const course = localStorage.getItem("admin_course") || "";
-    const section = localStorage.getItem("admin_section") || "";
-    const data = await api("admin_grades_get", { course_code: course, section });
-    meta.textContent = `عرض المدرب — المقرر: ${course||"-"} | الشعبة: ${section||"بدون"}`;
-    renderRows(data.rows);
+    await renderAdminSelector(document.getElementById("selector"), ()=>loadAdmin());
+    await loadAdmin();
     return;
   }
 

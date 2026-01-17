@@ -15,7 +15,7 @@
 
   <div class="card">
     <div class="h2">تسجيل الدخول (Firebase)</div>
-    <div class="muted">خاص بالمدرب/المدير فقط</div>
+    <div class="muted">بعد الدخول سيتم التحقق من الصلاحية عبر GAS (AdminEmail).</div>
 
     <div class="row" style="margin-top:12px">
       <input id="email" class="input" type="email" placeholder="البريد الإلكتروني">
@@ -24,14 +24,14 @@
 
     <div class="row" style="margin-top:12px">
       <button class="btn primary" onclick="login()">دخول</button>
-      <button class="btn" onclick="clearAdmin()">مسح الدخول</button>
+      <button class="btn" onclick="clearAdmin()">مسح</button>
     </div>
 
     <div id="msg" class="muted" style="margin-top:12px"></div>
   </div>
 </div>
 
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=4"></script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
@@ -58,13 +58,12 @@
       localStorage.setItem("firebase_token", token);
       localStorage.setItem("mode", "admin");
 
-      // تحقق من صلاحية admin داخل GAS (AdminEmail في Settings)
+      // تحقق صلاحية الأدمن من GAS
       await api("admin_login", {});
-      location.href = "admin-dashboard.html";
+      location.href = "admin-dashboard.html?v=4";
 
     }catch(e){
-      msg.textContent = "فشل الدخول: " + (e?.message || e);
-      // نظّف الجلسة
+      msg.textContent = "فشل: " + (e?.message || e);
       try{ await signOut(auth); }catch(_){}
       localStorage.removeItem("firebase_token");
       localStorage.removeItem("mode");
@@ -75,7 +74,7 @@
     try{ await signOut(auth); }catch(_){}
     localStorage.removeItem("firebase_token");
     localStorage.removeItem("mode");
-    msg.textContent = "تم مسح دخول المدرب.";
+    msg.textContent = "تم المسح.";
   };
 </script>
 </body>

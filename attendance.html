@@ -11,56 +11,46 @@
   <div class="topbar">
     <div class="brand">سجل الحضور</div>
     <div class="actions">
-      <a class="btn" href="dashboard.html">رجوع</a>
-      <button class="btn" onclick="logoutAdmin()" id="adminBtn" style="display:none">خروج المدرب</button>
+      <a class="btn" href="dashboard.html" id="backStd">رجوع</a>
+      <a class="btn" href="admin-dashboard.html" id="backAdm" style="display:none">رجوع</a>
+      <button class="btn" id="outStd" onclick="logoutStudent()">خروج</button>
+      <button class="btn" id="outAdm" onclick="exitAdminMode()" style="display:none">خروج المدرب</button>
     </div>
   </div>
 
-  <div id="selector"></div>
-
   <div class="card">
     <div id="meta" class="muted"></div>
-    <div class="tableWrap" id="tbl" style="margin-top:12px"></div>
+    <div id="tbl"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-function renderRows(rows){
-  if(!rows || !rows.length){
-    tbl.innerHTML = `<div class="muted">لا توجد بيانات.</div>`;
-    return;
-  }
-  const headers = Object.keys(rows[0]);
-  const thead = `<tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
-  const tbody = rows.map(r=>`<tr>${headers.map(h=>`<td>${esc(r[h])}</td>`).join("")}</tr>`).join("");
-  tbl.innerHTML = `<table class="table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
-}
+  async function init(){
+    requireStudentOrAdmin();
 
-async function loadAdmin(){
-  const course = getAdminCourse();
-  const section = getAdminSection();
-  const data = await api("admin_attendance_get", { course_code: course, section });
-  meta.textContent = `عرض المدرب — المقرر: ${course||"-"} | الشعبة: ${section||"بدون"}`;
-  renderRows(data.rows);
-}
+    if (isAdmin()){
+      backStd.style.display="none";
+      outStd.style.display="none";
+      backAdm.style.display="";
+      outAdm.style.display="";
 
-async function init(){
-  requireStudentOrAdmin();
+      const course = qs("course") || localStorage.getItem("admin_course") || "";
+      const section = qs("section") || localStorage.getItem("admin_section") || "";
+      if(!section) throw new Error("اختر الشعبة من لوحة المدرب أولاً.");
 
-  if(isAdmin()){
-    adminBtn.style.display = "inline-block";
-    await renderAdminSelector(document.getElementById("selector"), ()=>loadAdmin());
-    await loadAdmin();
-    return;
+      const data = await api("admin_attendance_get", { section, course_code: course });
+      meta.textContent = `عرض المدرب — المقرر: ${course || "-"} | الشعبة: ${section || "-"}`;
+      renderTable(tbl, data.rows || []);
+      return;
+    }
+
+    const data = await api("attendance_get",{});
+    meta.textContent = `عرض المتدرب — المقرر: ${data.course_code || "-"} | الشعبة: ${data.section || "-"}`;
+    renderTable(tbl, data.rows || []);
   }
 
-  const data = await api("attendance_get", {});
-  meta.textContent = `عرض متدرب — المقرر: ${data.course_code||"-"} | الشعبة: ${data.section||"-"}`;
-  renderRows(data.rows);
-}
-
-init().catch(e=>alert(e.message||e));
+  init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

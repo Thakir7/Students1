@@ -12,37 +12,48 @@
     <div class="brand">خطة المقرر</div>
     <div class="actions">
       <a class="btn" href="dashboard.html">رجوع</a>
-      <button class="btn" onclick="isAdmin()?logoutAdmin():logoutStudent()">خروج</button>
+      <button class="btn danger" onclick="isAdmin()?exitAdminMode():logoutStudent()">خروج</button>
     </div>
   </div>
 
   <div class="card">
     <div id="meta" class="muted"></div>
-    <div id="tbl" style="margin-top:10px"></div>
+    <div class="tableWrap" id="tbl" style="margin-top:12px"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
+function renderMatrix(rows){
+  if (!rows || !rows.length){
+    tbl.innerHTML = '<div class="muted">لا توجد بيانات</div>';
+    return;
+  }
+  const headers = rows[0].map((_,i)=>"عمود "+(i+1));
+  const thead = `<tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
+  const tbody = rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+  tbl.innerHTML = `<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
 async function init(){
   requireStudentOrAdmin();
 
   if (isAdmin()){
-    const course = getAdminCourse() || qs("course");
-    if (!course) { location.href="admin-dashboard.html"; return; }
-    // أسهل: المدرب يفتح الخطة من خلال اختيار المقرر في لوحة المدرب
-    // نحتاج طالب حتى plan_get؟ لا، plan_get يتطلب طالب.
-    // لذلك نوصّلها للمدرب عبر نفس بيانات الطالب؟ الأفضل إضافة admin_plan_get لاحقاً.
-    meta.textContent = `المدرب: افتح الخطة للطلاب من تبويب الشيت مباشرة حالياً (سأضيف admin_plan_get إذا رغبت).`;
-    tbl.innerHTML = `<div class="muted">يمكنني إضافة دعم عرض الخطة للمدرب فوراً إذا طلبت.</div>`;
+    const c = localStorage.getItem("admin_course") || "";
+    if (!c) { location.href="admin-dashboard.html"; return; }
+    // للمدرب نعرض خطة المقرر فقط (حسب course)
+    // نستخدم plan_get ولكن يحتاج token طالب — لذلك نعرض للخطة عبر course فقط غير متاح في السيرفر حالياً
+    // أسهل: افتح plan كمتدرب (ليس مطلوب). أو أضف أكشن admin_plan_get لاحقاً.
+    meta.textContent = `لوحة المدرب — افتح الخطة من Google Sheet أو أطلب مني إضافة admin_plan_get. (المقرر الحالي: ${c})`;
+    tbl.innerHTML = '<div class="muted">حاليًا الخطة للمتدرب فقط عبر token. إذا ترغب، أضيف لك admin_plan_get فورًا.</div>';
     return;
   }
 
-  const st = getStudent();
-  const data = await api("plan_get",{});
-  meta.textContent = `المقرر: ${st.course} — (${data.sheet})`;
-  renderTable(tbl, data.headers, data.rows);
+  const data = await api("plan_get", {});
+  meta.textContent = `المقرر: ${data.course_code}`;
+  renderMatrix(data.rows);
 }
+
 init().catch(e=>alert(e.message||e));
 </script>
 </body>

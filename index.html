@@ -35,9 +35,20 @@
 <script>
 async function login(){
   msg.textContent = "جاري التحقق...";
+
+  const training_id = normDigits(tid.value);
+  const id_last4 = normDigits(last4.value);
+
+  if(!training_id){
+    msg.textContent = "أدخل الرقم التدريبي.";
+    return;
+  }
+  if(id_last4.length !== 4){
+    msg.textContent = "أدخل آخر 4 أرقام من الهوية (4 أرقام).";
+    return;
+  }
+
   try{
-    const training_id = tid.value.trim();
-    const id_last4 = last4.value.trim();
     const data = await api("student_login", { training_id, id_last4 });
     saveSession(data);
     location.href = "dashboard.html";

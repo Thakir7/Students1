@@ -16,6 +16,15 @@
   </div>
 
   <div class="card">
+    <div class="h2">تشخيص سريع</div>
+    <div class="muted" id="diag"></div>
+    <div class="row" style="margin-top:10px; gap:10px">
+      <button class="btn" onclick="runDiag()">تحديث التشخيص</button>
+      <button class="btn" onclick="hardReload()">تحديث قوي (كسر كاش)</button>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="h2">اختيار المقرر والشعبة</div>
     <div class="row" style="gap:10px; margin-top:10px">
       <select id="courseSel" class="input"></select>
@@ -24,11 +33,13 @@
     </div>
     <div id="ctx" class="muted" style="margin-top:10px"></div>
 
-    <div style="margin-top:12px">
+    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
       <a class="btn" id="goGrades" href="grades.html">سجل الدرجات</a>
       <a class="btn" id="goAtt" href="attendance.html">سجل الحضور</a>
       <a class="btn" id="goPlan" href="plan.html">خطة المقرر</a>
       <a class="btn" id="goPol" href="policies.html">سياسات المقرر</a>
+      <a class="btn" id="goContact" href="contact.html">التواصل</a>
+      <a class="btn" id="goCal" href="calendar.html">التقويم</a>
     </div>
   </div>
 
@@ -43,15 +54,20 @@
   </div>
 </div>
 
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=4"></script>
 <script>
   let all = [];
 
-  function requireAdmin(){
-    if (!isAdmin()) location.href = "admin-login.html";
+  function hardReload(){
+    // يضيف باراميتر وقت لكسر الكاش
+    location.href = "admin-dashboard.html?v=" + Date.now();
   }
 
-  function unique(arr){ return [...new Set(arr)]; }
+  function requireAdmin(){
+    if (!isAdmin()) location.href = "admin-login.html?v=4";
+  }
+
+  function unique(arr){ return [...new Set(arr.filter(Boolean))]; }
 
   function fill(){
     const courses = unique(all.map(x=>x.course));
@@ -61,6 +77,7 @@
     if (savedC) courseSel.value = savedC;
 
     refreshSections();
+
     const savedS = localStorage.getItem("admin_section") || "";
     if (savedS) sectionSel.value = savedS;
 
@@ -76,17 +93,19 @@
   function updateLinks(){
     const c = courseSel.value || "";
     const s = sectionSel.value || "";
+
     ctx.textContent = `المقرر: ${c || "-"} | الشعبة: ${s || "-"}`;
 
-    // خزّنها بحيث كل صفحة تستخدمها بدون إعادة اختيار
     localStorage.setItem("admin_course", c);
     localStorage.setItem("admin_section", s);
 
-    const q = `?course=${encodeURIComponent(c)}&section=${encodeURIComponent(s)}`;
+    const q = `?course=${encodeURIComponent(c)}&section=${encodeURIComponent(s)}&v=4`;
     goGrades.href = "grades.html"+q;
     goAtt.href   = "attendance.html"+q;
     goPol.href   = "policies.html"+q;
-    goPlan.href  = "plan.html"+q; // plan يعتمد على course
+    goPlan.href  = "plan.html"+q;
+    goContact.href = "contact.html?v=4";
+    goCal.href = "calendar.html?v=4";
   }
 
   function applyCtx(){
@@ -104,23 +123,74 @@
       });
       newCourse.value=""; newSection.value="";
       addMsg.textContent = "تمت الإضافة.";
-      await load();
+      await loadCourses();
     }catch(e){
       addMsg.textContent = e.message || String(e);
     }
   }
 
-  async function load(){
+  async function runDiag(){
+    try{
+      requireAdmin();
+
+      let out = [];
+      out.push(`API_URL: ${API_URL}`);
+
+      // 1) تحقق admin_login
+      try{
+        await api("admin_login",{});
+        out.push("admin_login: ✅ OK");
+      }catch(e){
+        out.push("admin_login: ❌ " + (e.message||e));
+      }
+
+      // 2) meta
+      try{
+        const meta = await api("meta",{});
+        out.push("meta/actions: " + (meta.actions ? meta.actions.length : "-"));
+      }catch(e){
+        out.push("meta: ❌ " + (e.message||e));
+      }
+
+      // 3) courses list
+      try{
+        const data = await api("admin_courses_list",{});
+        out.push("Course rows: " + ((data.rows||[]).length));
+      }catch(e){
+        out.push("admin_courses_list: ❌ " + (e.message||e));
+      }
+
+      diag.innerHTML = out.map(x=>`<div>${esc(x)}</div>`).join("");
+    }catch(e){
+      diag.textContent = e.message || String(e);
+    }
+  }
+
+  async function loadCourses(){
     requireAdmin();
+    // لو هنا فشل -> سوف يظهر في runDiag السبب
     const data = await api("admin_courses_list",{});
     all = data.rows || [];
+
+    if(!all.length){
+      courseSel.innerHTML = "";
+      sectionSel.innerHTML = "";
+      ctx.textContent = "⚠️ لا توجد مقررات فعالة في شيت Course (أو أنك على API_URL خاطئ). اضغط (تحديث التشخيص).";
+      return;
+    }
     fill();
   }
 
   courseSel.addEventListener("change", ()=>{ refreshSections(); updateLinks(); });
   sectionSel.addEventListener("change", ()=>updateLinks());
 
-  load().catch(e=>alert(e.message||e));
+  // تشغيل
+  (async ()=>{
+    await runDiag();
+    await loadCourses();
+  })().catch(e=>{
+    diag.textContent = e.message || String(e);
+  });
 </script>
 </body>
 </html>

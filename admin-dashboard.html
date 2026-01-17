@@ -15,20 +15,12 @@
     </div>
   </div>
 
+  <div id="selector"></div>
+
   <div class="card">
-    <div class="h2">اختيار المقرر والشعبة</div>
+    <div class="h2">الخدمات (تعمل حسب اختيارك المحفوظ)</div>
+    <div class="muted" style="margin-top:8px" id="meta"></div>
 
-    <div class="row" style="margin-top:12px">
-      <select id="course" class="input"></select>
-      <select id="section" class="input"></select>
-      <button class="btn primary" onclick="apply()">تطبيق</button>
-    </div>
-
-    <div class="muted" style="margin-top:10px" id="meta"></div>
-
-    <hr style="margin:16px 0">
-
-    <div class="h2">الخدمات</div>
     <div class="grid" style="margin-top:12px">
       <a class="btn" href="policies.html">سياسات المقرر</a>
       <a class="btn" href="plan.html">خطة المقرر</a>
@@ -44,46 +36,13 @@
 <script>
 async function init(){
   requireAdminOnly();
+  await renderAdminSelector(document.getElementById("selector"), ()=>{
+    meta.textContent = `المقرر الحالي: ${getAdminCourse()||"-"} | الشعبة: ${getAdminSection()||"بدون"}`;
+  });
 
-  const data = await api("admin_courses_list", {});
-  // data.courses: [{course:"INET111", sections:["INET111 1","INET111 2",...]} , ...]
-  if(!data.courses || !data.courses.length){
-    meta.textContent = "لا توجد مقررات في شيت Students.";
-    return;
-  }
-
-  course.innerHTML = data.courses.map(c=>`<option value="${esc(c.course)}">${esc(c.course)}</option>`).join("");
-  course.onchange = ()=>fillSections(data.courses);
-
-  const savedCourse = localStorage.getItem("admin_course");
-  if(savedCourse) course.value = savedCourse;
-
-  fillSections(data.courses);
-
-  meta.textContent = "القائمة تأتي من شيت Students (عمود المقرر + عمود الشعبة).";
+  // لو ما اختار قبل، نعرض الحالة بعد التحميل
+  meta.textContent = `المقرر الحالي: ${getAdminCourse()||"-"} | الشعبة: ${getAdminSection()||"بدون"}`;
 }
-
-function fillSections(list){
-  const c = list.find(x=>x.course===course.value) || list[0];
-  const sections = (c.sections || []).filter(Boolean);
-
-  // إن لم توجد شعب، نضع خيار "بدون"
-  const opts = sections.length
-    ? sections.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("")
-    : `<option value="">بدون شعبة</option>`;
-
-  section.innerHTML = opts;
-
-  const savedSection = localStorage.getItem("admin_section");
-  if(savedSection && sections.includes(savedSection)) section.value = savedSection;
-}
-
-function apply(){
-  localStorage.setItem("admin_course", course.value);
-  localStorage.setItem("admin_section", section.value);
-  alert("تم حفظ الاختيار.");
-}
-
 init().catch(e=>alert(e.message||e));
 </script>
 </body>

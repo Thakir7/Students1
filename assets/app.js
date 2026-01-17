@@ -4,7 +4,6 @@ function saveSession(data){
   localStorage.setItem("token", data.token);
   localStorage.setItem("student", JSON.stringify(data.student));
 }
-
 function getToken(){ return localStorage.getItem("token"); }
 function getStudent(){ return JSON.parse(localStorage.getItem("student") || "null"); }
 
@@ -39,8 +38,13 @@ async function api(action, payload = {}){
     ...payload
   });
 
-  const res = await fetch(API_URL, { method:"POST", body });
-  const data = await res.json().catch(()=>({ok:false, message:"تعذر قراءة الرد"}));
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body
+  });
+
+  const data = await res.json().catch(()=>({ ok:false, message:"تعذر قراءة الرد" }));
   if (!data.ok) throw new Error(data.message || "خطأ");
   return data;
 }
@@ -52,9 +56,7 @@ function esc(s){
     "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
   }[m]));
 }
-
 function toDateMs(s){
-  // يقبل: 2026-01-17T15:30 أو تاريخ Google Sheet كنص
   const t = Date.parse(s);
   return isNaN(t) ? null : t;
 }

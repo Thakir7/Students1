@@ -1,5 +1,5 @@
 // === Students1 Frontend Helper (DIAG+FIX v4) ===
-const API_URL = "https://script.google.com/macros/s/AKfycbxhyxk69wn7RQa9wlL4L8zG_QW_YecA9mdXxPsCp3hzQO9s4eCpZ34KIVNgjZr5QJ_mGQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyI_XnCXFhfR1lYgzhwfUyl2YLqfUeGqdjf5p8k_KsOMNRFx-vsmh2-pXGz1mTH2SzU/exec";
 
 function saveSession(data){
   localStorage.setItem("token", data.token || "");

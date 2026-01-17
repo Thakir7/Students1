@@ -24,7 +24,7 @@
 
     <div class="row" style="margin-top:12px">
       <button class="btn primary" onclick="login()">دخول</button>
-      <button class="btn" onclick="logout()">مسح الدخول</button>
+      <button class="btn" onclick="clearAdmin()">مسح الدخول</button>
     </div>
 
     <div id="msg" class="muted" style="margin-top:12px"></div>
@@ -58,15 +58,20 @@
       localStorage.setItem("firebase_token", token);
       localStorage.setItem("mode", "admin");
 
-      // ✅ تحقق صلاحية الإيميل من Settings/AdminEmail
+      // تحقق من صلاحية admin داخل GAS (AdminEmail في Settings)
       await api("admin_login", {});
       location.href = "admin-dashboard.html";
+
     }catch(e){
       msg.textContent = "فشل الدخول: " + (e?.message || e);
+      // نظّف الجلسة
+      try{ await signOut(auth); }catch(_){}
+      localStorage.removeItem("firebase_token");
+      localStorage.removeItem("mode");
     }
   };
 
-  window.logout = async function(){
+  window.clearAdmin = async function(){
     try{ await signOut(auth); }catch(_){}
     localStorage.removeItem("firebase_token");
     localStorage.removeItem("mode");

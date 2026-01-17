@@ -11,51 +11,46 @@
   <div class="topbar">
     <div class="brand">سجل الدرجات</div>
     <div class="actions">
-      <a class="btn" href="dashboard.html">رجوع</a>
-      <button class="btn" onclick="isAdmin()?exitAdminMode():logoutStudent()">خروج</button>
+      <a class="btn" href="dashboard.html" id="backStd">رجوع</a>
+      <a class="btn" href="admin-dashboard.html" id="backAdm" style="display:none">رجوع</a>
+      <button class="btn" id="outStd" onclick="logoutStudent()">خروج</button>
+      <button class="btn" id="outAdm" onclick="exitAdminMode()" style="display:none">خروج المدرب</button>
     </div>
   </div>
 
   <div class="card">
     <div id="meta" class="muted"></div>
-    <div class="tableWrap" id="tbl" style="margin-top:10px"></div>
+    <div id="tbl"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-  requireStudentOrAdmin();
+  async function init(){
+    requireStudentOrAdmin();
 
-  function renderTable(rows){
-    if (!rows || !rows.length){
-      tbl.innerHTML = `<div class="muted">لا توجد بيانات</div>`;
+    if (isAdmin()){
+      backStd.style.display="none";
+      outStd.style.display="none";
+      backAdm.style.display="";
+      outAdm.style.display="";
+
+      const course = qs("course") || localStorage.getItem("admin_course") || "";
+      const section = qs("section") || localStorage.getItem("admin_section") || "";
+      if(!section) throw new Error("اختر الشعبة من لوحة المدرب أولاً.");
+
+      const data = await api("admin_grades_get", { section, course_code: course });
+      meta.textContent = `عرض المدرب — المقرر: ${course || "-"} | الشعبة: ${section || "-"}`;
+      renderTable(tbl, data.rows || []);
       return;
     }
-    const head = Object.keys(rows[0]);
-    const thead = `<tr>${head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
-    const tbody = rows.map(r=>`<tr>${head.map(h=>`<td>${esc(r[h])}</td>`).join("")}</tr>`).join("");
-    tbl.innerHTML = `<table class="table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+
+    const data = await api("grades_get",{});
+    meta.textContent = `عرض المتدرب — المقرر: ${data.course_code || "-"} | الشعبة: ${data.section || "-"}`;
+    renderTable(tbl, data.rows || []);
   }
 
-  async function init(){
-    try{
-      if (isAdmin() || qs("admin")==="1"){
-        const course = localStorage.getItem("admin_course") || "";
-        const section = localStorage.getItem("admin_section") || "";
-        meta.textContent = `عرض المدرب — المقرر: ${course||"-"} | الشعبة: ${section||"-"}`;
-        const data = await api("admin_grades_get", { course_code: course, section });
-        renderTable(data.rows || []);
-        return;
-      }
-
-      const data = await api("grades_get", {});
-      meta.textContent = `المقرر: ${data.course_code||"-"} | الشعبة: ${data.section||"-"}`;
-      renderTable(data.row ? [data.row] : []);
-    }catch(e){
-      alert(e.message || e);
-    }
-  }
-  init();
+  init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

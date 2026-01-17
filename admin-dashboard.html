@@ -11,39 +11,152 @@
   <div class="topbar">
     <div class="brand">لوحة المدرب</div>
     <div class="actions">
-      <button class="btn" onclick="logoutAdmin()">خروج المدرب</button>
+      <button class="btn" onclick="exitAdminMode()">خروج المدرب</button>
+      <a class="btn" href="index.html">رجوع</a>
     </div>
   </div>
 
-  <div id="selector"></div>
-
   <div class="card">
-    <div class="h2">الخدمات (تعمل حسب اختيارك المحفوظ)</div>
-    <div class="muted" style="margin-top:8px" id="meta"></div>
+    <div class="h2">اختيار المقرر والشعبة</div>
+    <div class="row" style="margin-top:12px">
+      <select id="courseSel" class="input"></select>
+      <select id="sectionSel" class="input"></select>
+      <button class="btn primary" onclick="applySelection()">تطبيق</button>
+    </div>
+    <div id="selMsg" class="muted" style="margin-top:10px"></div>
 
-    <div class="grid" style="margin-top:12px">
-      <a class="btn" href="policies.html">سياسات المقرر</a>
-      <a class="btn" href="plan.html">خطة المقرر</a>
-      <a class="btn" href="attendance.html">سجل الحضور</a>
-      <a class="btn" href="grades.html">سجل الدرجات</a>
-      <a class="btn" href="calendar.html">التقويم الدراسي</a>
-      <a class="btn" href="contact.html">بيانات التواصل</a>
+    <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
+
+    <div class="h2">إدارة المقررات/الشعب</div>
+    <div class="muted">هذه القائمة تأتي من شيت Courses (وليس من تكرار Students)</div>
+
+    <div class="row" style="margin-top:12px">
+      <input id="newCourse" class="input" placeholder="كود المقرر (مثال: INET111)">
+      <input id="newSection" class="input" placeholder="الشعبة (مثال: INET111 2) أو اتركها فارغة لمقرر بدون شعب">
+      <button class="btn" onclick="addCourse()">إضافة</button>
+    </div>
+
+    <div id="coursesTbl" class="tableWrap" style="margin-top:12px"></div>
+
+    <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
+
+    <div class="h2">الخدمات (تفتح بنفس اختيارك)</div>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap;gap:10px">
+      <a class="btn" id="lnkPolicies" href="#">سياسات المقرر</a>
+      <a class="btn" id="lnkPlan" href="#">خطة المقرر</a>
+      <a class="btn" id="lnkAttendance" href="#">سجل الحضور</a>
+      <a class="btn" id="lnkGrades" href="#">سجل الدرجات</a>
+      <a class="btn" id="lnkCalendar" href="#">التقويم</a>
+      <a class="btn" id="lnkContact" href="#">بيانات التواصل</a>
     </div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-async function init(){
-  requireAdminOnly();
-  await renderAdminSelector(document.getElementById("selector"), ()=>{
-    meta.textContent = `المقرر الحالي: ${getAdminCourse()||"-"} | الشعبة: ${getAdminSection()||"بدون"}`;
-  });
+let allCourses = [];
 
-  // لو ما اختار قبل، نعرض الحالة بعد التحميل
-  meta.textContent = `المقرر الحالي: ${getAdminCourse()||"-"} | الشعبة: ${getAdminSection()||"بدون"}`;
+function uniq(arr){ return [...new Set(arr)]; }
+
+function renderCoursesTable(items){
+  if(!items.length){ coursesTbl.innerHTML = '<div class="muted">لا يوجد عناصر.</div>'; return; }
+  const rows = items.map(it=>`
+    <tr>
+      <td>${esc(it.course)}</td>
+      <td>${esc(it.section||"")}</td>
+      <td>${it.active ? "✅" : "—"}</td>
+      <td><button class="btn" onclick="delCourse('${esc(it.id)}')">حذف</button></td>
+    </tr>
+  `).join("");
+  coursesTbl.innerHTML = `
+    <table class="table">
+      <thead><tr><th>المقرر</th><th>الشعبة</th><th>نشط</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
 }
-init().catch(e=>alert(e.message||e));
+
+function fillDropdowns(items){
+  allCourses = items.filter(x=>x.active);
+
+  const courses = uniq(allCourses.map(x=>x.course).filter(Boolean));
+  courseSel.innerHTML = `<option value="">اختر المقرر</option>` + courses.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+
+  courseSel.onchange = () => {
+    const c = courseSel.value;
+    const sections = allCourses.filter(x=>x.course===c).map(x=>x.section).filter(Boolean);
+    sectionSel.innerHTML = `<option value="">بدون شعبة</option>` + sections.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
+  };
+
+  // restore previous selection
+  const sel = getAdminSelection();
+  if (sel.course){
+    courseSel.value = sel.course;
+    courseSel.onchange();
+    sectionSel.value = sel.section || "";
+  } else {
+    courseSel.onchange();
+  }
+}
+
+function updateLinks(){
+  lnkPolicies.href = withAdminQS("policies.html");
+  lnkPlan.href = withAdminQS("plan.html");
+  lnkAttendance.href = withAdminQS("attendance.html");
+  lnkGrades.href = withAdminQS("grades.html");
+  lnkCalendar.href = withAdminQS("calendar.html");
+  lnkContact.href = withAdminQS("contact.html");
+}
+
+async function init(){
+  requireStudentOrAdmin();
+  if(!isAdmin()) { location.href="index.html"; return; }
+
+  try{
+    await api("admin_login", {}); // verify admin
+    const data = await api("admin_courses_list", {});
+    renderCoursesTable(data.items||[]);
+    fillDropdowns(data.items||[]);
+    updateLinks();
+  }catch(e){
+    alert(e.message||e);
+  }
+}
+
+async function addCourse(){
+  try{
+    await api("admin_courses_add", { course:newCourse.value.trim(), section:newSection.value.trim() });
+    newCourse.value=""; newSection.value="";
+    const data = await api("admin_courses_list", {});
+    renderCoursesTable(data.items||[]);
+    fillDropdowns(data.items||[]);
+  }catch(e){
+    alert(e.message||e);
+  }
+}
+
+async function delCourse(id){
+  if(!confirm("حذف هذا العنصر؟")) return;
+  try{
+    await api("admin_courses_delete", { id });
+    const data = await api("admin_courses_list", {});
+    renderCoursesTable(data.items||[]);
+    fillDropdowns(data.items||[]);
+  }catch(e){
+    alert(e.message||e);
+  }
+}
+
+function applySelection(){
+  const c = courseSel.value;
+  const s = sectionSel.value;
+  if(!c){ selMsg.textContent="اختر المقرر أولًا"; return; }
+  setAdminSelection(c, s);
+  selMsg.textContent = `تم التحديد: المقرر ${c} ${s?("| الشعبة "+s):"(بدون شعبة)"}`;
+  updateLinks();
+}
+
+init();
 </script>
 </body>
 </html>

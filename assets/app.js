@@ -1,16 +1,15 @@
-// === Students1 Frontend Helper (v3) ===
-// ضع رابط WebApp هنا (نفس رابط /exec الحالي)
+// === Students1 Frontend Helper (DIAG+FIX v4) ===
 const API_URL = "https://script.google.com/macros/s/AKfycbxhyxk69wn7RQa9wlL4L8zG_QW_YecA9mdXxPsCp3hzQO9s4eCpZ34KIVNgjZr5QJ_mGQ/exec";
 
 function saveSession(data){
   localStorage.setItem("token", data.token || "");
   localStorage.setItem("student", JSON.stringify(data.student || {}));
 }
-
 function getToken(){ return localStorage.getItem("token"); }
 function getStudent(){ return JSON.parse(localStorage.getItem("student") || "null"); }
 
 function isAdmin(){
+  // شرط الأدمن: mode=admin + وجود firebase_token
   return localStorage.getItem("mode") === "admin" && !!localStorage.getItem("firebase_token");
 }
 
@@ -33,10 +32,13 @@ function exitAdminMode(){
   location.href = "index.html";
 }
 
+// تحويل الأرقام العربية/الفارسية إلى إنجليزي + حذف غير الأرقام
 function digitsOnly(s){
   s = String(s ?? "");
-  const map = {"٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9",
-               "۰":"0","۱":"1","۲":"2","۳":"3","۴":"4","۵":"5","۶":"6","۷":"7","۸":"8","۹":"9"};
+  const map = {
+    "٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9",
+    "۰":"0","۱":"1","۲":"2","۳":"3","۴":"4","۵":"5","۶":"6","۷":"7","۸":"8","۹":"9"
+  };
   s = s.replace(/[٠-٩۰-۹]/g, ch => map[ch] || ch);
   return s.replace(/\D+/g,"");
 }
@@ -50,7 +52,7 @@ async function api(action, payload={}){
   });
 
   const res = await fetch(API_URL, { method:"POST", body });
-  const data = await res.json().catch(()=>({ok:false,message:"تعذر قراءة الرد"}));
+  const data = await res.json().catch(()=>({ok:false, message:"تعذر قراءة الرد"}));
   if (!data.ok) throw new Error(data.message || "خطأ");
   return data;
 }

@@ -10,58 +10,38 @@
 <div class="container">
   <div class="topbar">
     <div class="brand">بوابة المتدرب</div>
-    <div class="actions">
-      <a class="btn" href="admin-login.html">دخول المدرب</a>
-    </div>
+    <div class="actions"></div>
   </div>
 
   <div class="card">
     <div class="h2">تسجيل دخول المتدرب</div>
+    <div class="muted">أدخل الرقم التدريبي + آخر 4 أرقام من الهوية</div>
 
-    <div class="row" style="margin-top:12px">
-      <input id="tid" class="input" inputmode="numeric" placeholder="أدخل الرقم التدريبي">
-      <input id="last4" class="input" inputmode="numeric" placeholder="أدخل آخر 4 أرقام من الهوية">
-    </div>
-
-    <div class="row" style="margin-top:12px">
+    <div class="row" style="margin-top:12px; gap:10px">
+      <input id="tid" class="input" inputmode="numeric" placeholder="الرقم التدريبي">
+      <input id="last4" class="input" inputmode="numeric" placeholder="آخر 4 أرقام من الهوية">
       <button class="btn primary" onclick="loginStudent()">دخول</button>
-      <button class="btn" onclick="clearAll()">مسح</button>
     </div>
 
-    <div id="msg" class="muted" style="margin-top:10px"></div>
+    <div id="msg" class="muted" style="margin-top:12px"></div>
   </div>
 </div>
 
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=4"></script>
 <script>
-  function toDigits(s){
-    s = String(s||"");
-    const map = {"٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9"};
-    s = s.replace(/[٠-٩]/g, ch => map[ch] || ch);
-    return s.replace(/[^0-9]/g,"");
+async function loginStudent(){
+  msg.textContent = "جاري التحقق...";
+  try{
+    const data = await api("student_login", {
+      training_id: tid.value,
+      last4: last4.value
+    });
+    saveSession(data);
+    location.href = "dashboard.html?v=4";
+  }catch(e){
+    msg.textContent = e.message || String(e);
   }
-
-  async function loginStudent(){
-    msg.textContent = "جاري الدخول...";
-    try{
-      const training_id = toDigits(tid.value);
-      const l4 = toDigits(last4.value).slice(-4);
-
-      const data = await api("student_login", { training_id, last4: l4 });
-      saveSession(data);
-      location.href = "dashboard.html";
-    }catch(e){
-      msg.textContent = e.message || e;
-    }
-  }
-
-  function clearAll(){
-    tid.value = "";
-    last4.value = "";
-    msg.textContent = "";
-    localStorage.removeItem("token");
-    localStorage.removeItem("student");
-  }
+}
 </script>
 </body>
 </html>

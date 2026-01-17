@@ -12,125 +12,115 @@
     <div class="brand">لوحة المدرب</div>
     <div class="actions">
       <button class="btn" onclick="exitAdminMode()">خروج المدرب</button>
-      <a class="btn" href="index.html">الصفحة الرئيسية</a>
     </div>
   </div>
 
   <div class="card">
     <div class="h2">اختيار المقرر والشعبة</div>
-
-    <div class="row" style="margin-top:12px">
+    <div class="row" style="gap:10px; margin-top:10px">
       <select id="courseSel" class="input"></select>
       <select id="sectionSel" class="input"></select>
-      <button class="btn primary" onclick="applySelection()">تطبيق</button>
+      <button class="btn primary" onclick="applyCtx()">تطبيق</button>
     </div>
+    <div id="ctx" class="muted" style="margin-top:10px"></div>
 
-    <div class="muted" id="meta" style="margin-top:10px"></div>
+    <div style="margin-top:12px">
+      <a class="btn" id="goGrades" href="grades.html">سجل الدرجات</a>
+      <a class="btn" id="goAtt" href="attendance.html">سجل الحضور</a>
+      <a class="btn" id="goPlan" href="plan.html">خطة المقرر</a>
+      <a class="btn" id="goPol" href="policies.html">سياسات المقرر</a>
+    </div>
   </div>
 
   <div class="card">
-    <div class="h2">إضافة مقرر/شعبة (للمدرب)</div>
-    <div class="row" style="margin-top:12px">
-      <input id="newCourse" class="input" placeholder="كود المقرر مثل INET111">
-      <input id="newSection" class="input" placeholder="الشعبة مثل INET111 2">
+    <div class="h2">إضافة مقرر/شعبة (إلى شيت Course)</div>
+    <div class="row" style="gap:10px; margin-top:10px">
+      <input id="newCourse" class="input" placeholder="Course مثال: INET111">
+      <input id="newSection" class="input" placeholder="Section مثال: INET111 2">
       <button class="btn" onclick="addCourse()">إضافة</button>
     </div>
-    <div class="muted" id="addMsg" style="margin-top:10px"></div>
-  </div>
-
-  <div class="card">
-    <div class="h2">الخدمات (حسب الشعبة المختارة)</div>
-    <div class="row" style="margin-top:12px; flex-wrap:wrap">
-      <a class="btn" id="lnkAttendance" href="#">سجل الحضور</a>
-      <a class="btn" id="lnkGrades" href="#">سجل الدرجات</a>
-      <a class="btn" id="lnkPolicies" href="#">سياسات المقرر</a>
-      <a class="btn" id="lnkPlan" href="#">خطة المقرر</a>
-      <a class="btn" id="lnkReminders" href="#">التذكيرات</a>
-    </div>
+    <div id="addMsg" class="muted" style="margin-top:10px"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-  requireStudentOrAdmin();
-
   let all = [];
 
-  function setLinks(course, section){
-    // نخزن مرة واحدة + كل الصفحات تستخدم localStorage
-    localStorage.setItem("admin_course", course||"");
-    localStorage.setItem("admin_section", section||"");
-
-    lnkAttendance.href = "attendance.html?admin=1";
-    lnkGrades.href     = "grades.html?admin=1";
-    lnkPolicies.href   = "policies.html?admin=1";
-    lnkPlan.href       = "plan.html?admin=1";
-    lnkReminders.href  = "dashboard.html?admin=1"; // إن كنت تستخدم نفس صفحة dashboard للتذكيرات، أو عدّل لرابط reminders.html لو عندك
+  function requireAdmin(){
+    if (!isAdmin()) location.href = "admin-login.html";
   }
 
-  function rebuildDropdowns(){
-    // courses unique
-    const courses = [...new Set(all.map(x=>x.course_code))];
+  function unique(arr){ return [...new Set(arr)]; }
+
+  function fill(){
+    const courses = unique(all.map(x=>x.course));
     courseSel.innerHTML = courses.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
 
-    const savedCourse = localStorage.getItem("admin_course") || courses[0] || "";
-    courseSel.value = savedCourse;
+    const savedC = localStorage.getItem("admin_course") || courses[0] || "";
+    if (savedC) courseSel.value = savedC;
 
-    rebuildSections();
+    refreshSections();
+    const savedS = localStorage.getItem("admin_section") || "";
+    if (savedS) sectionSel.value = savedS;
+
+    updateLinks();
   }
 
-  function rebuildSections(){
-    const course = courseSel.value;
-    const sections = all.filter(x=>x.course_code===course).map(x=>x.section);
-    sectionSel.innerHTML = sections.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
-
-    const savedSec = localStorage.getItem("admin_section") || sections[0] || "";
-    if (sections.includes(savedSec)) sectionSel.value = savedSec;
-
-    meta.textContent = `المقرر: ${courseSel.value || "-"} | الشعبة: ${sectionSel.value || "-"}`;
-    setLinks(courseSel.value, sectionSel.value);
+  function refreshSections(){
+    const c = courseSel.value;
+    const secs = all.filter(x=>x.course===c).map(x=>x.section);
+    sectionSel.innerHTML = secs.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
   }
 
-  async function init(){
-    try{
-      const data = await api("admin_courses_list", {});
-      all = data.courses || [];
-      if (!all.length){
-        meta.textContent = "لا توجد مقررات/شعب. استخدم إضافة مقرر/شعبة.";
-        return;
-      }
-      rebuildDropdowns();
-      courseSel.onchange = rebuildSections;
-      sectionSel.onchange = rebuildSections;
-    }catch(e){
-      alert(e.message || e);
-    }
+  function updateLinks(){
+    const c = courseSel.value || "";
+    const s = sectionSel.value || "";
+    ctx.textContent = `المقرر: ${c || "-"} | الشعبة: ${s || "-"}`;
+
+    // خزّنها بحيث كل صفحة تستخدمها بدون إعادة اختيار
+    localStorage.setItem("admin_course", c);
+    localStorage.setItem("admin_section", s);
+
+    const q = `?course=${encodeURIComponent(c)}&section=${encodeURIComponent(s)}`;
+    goGrades.href = "grades.html"+q;
+    goAtt.href   = "attendance.html"+q;
+    goPol.href   = "policies.html"+q;
+    goPlan.href  = "plan.html"+q; // plan يعتمد على course
   }
 
-  function applySelection(){
-    meta.textContent = `تم اختيار: ${courseSel.value} / ${sectionSel.value}`;
-    setLinks(courseSel.value, sectionSel.value);
+  function applyCtx(){
+    refreshSections();
+    updateLinks();
   }
 
   async function addCourse(){
     addMsg.textContent = "جاري الإضافة...";
     try{
-      await api("admin_courses_add", {
-        course_code: newCourse.value.trim(),
-        section: newSection.value.trim(),
-        title: ""
+      await api("admin_courses_upsert", {
+        course: (newCourse.value||"").trim(),
+        section: (newSection.value||"").trim(),
+        active: true
       });
+      newCourse.value=""; newSection.value="";
       addMsg.textContent = "تمت الإضافة.";
-      // refresh
-      const data = await api("admin_courses_list", {});
-      all = data.courses || [];
-      rebuildDropdowns();
+      await load();
     }catch(e){
-      addMsg.textContent = e.message || e;
+      addMsg.textContent = e.message || String(e);
     }
   }
 
-  init();
+  async function load(){
+    requireAdmin();
+    const data = await api("admin_courses_list",{});
+    all = data.rows || [];
+    fill();
+  }
+
+  courseSel.addEventListener("change", ()=>{ refreshSections(); updateLinks(); });
+  sectionSel.addEventListener("change", ()=>updateLinks());
+
+  load().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

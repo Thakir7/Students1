@@ -12,151 +12,125 @@
     <div class="brand">لوحة المدرب</div>
     <div class="actions">
       <button class="btn" onclick="exitAdminMode()">خروج المدرب</button>
-      <a class="btn" href="index.html">رجوع</a>
+      <a class="btn" href="index.html">الصفحة الرئيسية</a>
     </div>
   </div>
 
   <div class="card">
     <div class="h2">اختيار المقرر والشعبة</div>
+
     <div class="row" style="margin-top:12px">
       <select id="courseSel" class="input"></select>
       <select id="sectionSel" class="input"></select>
       <button class="btn primary" onclick="applySelection()">تطبيق</button>
     </div>
-    <div id="selMsg" class="muted" style="margin-top:10px"></div>
 
-    <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
+    <div class="muted" id="meta" style="margin-top:10px"></div>
+  </div>
 
-    <div class="h2">إدارة المقررات/الشعب</div>
-    <div class="muted">هذه القائمة تأتي من شيت Courses (وليس من تكرار Students)</div>
-
+  <div class="card">
+    <div class="h2">إضافة مقرر/شعبة (للمدرب)</div>
     <div class="row" style="margin-top:12px">
-      <input id="newCourse" class="input" placeholder="كود المقرر (مثال: INET111)">
-      <input id="newSection" class="input" placeholder="الشعبة (مثال: INET111 2) أو اتركها فارغة لمقرر بدون شعب">
+      <input id="newCourse" class="input" placeholder="كود المقرر مثل INET111">
+      <input id="newSection" class="input" placeholder="الشعبة مثل INET111 2">
       <button class="btn" onclick="addCourse()">إضافة</button>
     </div>
+    <div class="muted" id="addMsg" style="margin-top:10px"></div>
+  </div>
 
-    <div id="coursesTbl" class="tableWrap" style="margin-top:12px"></div>
-
-    <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
-
-    <div class="h2">الخدمات (تفتح بنفس اختيارك)</div>
-    <div class="row" style="margin-top:12px;flex-wrap:wrap;gap:10px">
-      <a class="btn" id="lnkPolicies" href="#">سياسات المقرر</a>
-      <a class="btn" id="lnkPlan" href="#">خطة المقرر</a>
+  <div class="card">
+    <div class="h2">الخدمات (حسب الشعبة المختارة)</div>
+    <div class="row" style="margin-top:12px; flex-wrap:wrap">
       <a class="btn" id="lnkAttendance" href="#">سجل الحضور</a>
       <a class="btn" id="lnkGrades" href="#">سجل الدرجات</a>
-      <a class="btn" id="lnkCalendar" href="#">التقويم</a>
-      <a class="btn" id="lnkContact" href="#">بيانات التواصل</a>
+      <a class="btn" id="lnkPolicies" href="#">سياسات المقرر</a>
+      <a class="btn" id="lnkPlan" href="#">خطة المقرر</a>
+      <a class="btn" id="lnkReminders" href="#">التذكيرات</a>
     </div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-let allCourses = [];
-
-function uniq(arr){ return [...new Set(arr)]; }
-
-function renderCoursesTable(items){
-  if(!items.length){ coursesTbl.innerHTML = '<div class="muted">لا يوجد عناصر.</div>'; return; }
-  const rows = items.map(it=>`
-    <tr>
-      <td>${esc(it.course)}</td>
-      <td>${esc(it.section||"")}</td>
-      <td>${it.active ? "✅" : "—"}</td>
-      <td><button class="btn" onclick="delCourse('${esc(it.id)}')">حذف</button></td>
-    </tr>
-  `).join("");
-  coursesTbl.innerHTML = `
-    <table class="table">
-      <thead><tr><th>المقرر</th><th>الشعبة</th><th>نشط</th><th></th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
-
-function fillDropdowns(items){
-  allCourses = items.filter(x=>x.active);
-
-  const courses = uniq(allCourses.map(x=>x.course).filter(Boolean));
-  courseSel.innerHTML = `<option value="">اختر المقرر</option>` + courses.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
-
-  courseSel.onchange = () => {
-    const c = courseSel.value;
-    const sections = allCourses.filter(x=>x.course===c).map(x=>x.section).filter(Boolean);
-    sectionSel.innerHTML = `<option value="">بدون شعبة</option>` + sections.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
-  };
-
-  // restore previous selection
-  const sel = getAdminSelection();
-  if (sel.course){
-    courseSel.value = sel.course;
-    courseSel.onchange();
-    sectionSel.value = sel.section || "";
-  } else {
-    courseSel.onchange();
-  }
-}
-
-function updateLinks(){
-  lnkPolicies.href = withAdminQS("policies.html");
-  lnkPlan.href = withAdminQS("plan.html");
-  lnkAttendance.href = withAdminQS("attendance.html");
-  lnkGrades.href = withAdminQS("grades.html");
-  lnkCalendar.href = withAdminQS("calendar.html");
-  lnkContact.href = withAdminQS("contact.html");
-}
-
-async function init(){
   requireStudentOrAdmin();
-  if(!isAdmin()) { location.href="index.html"; return; }
 
-  try{
-    await api("admin_login", {}); // verify admin
-    const data = await api("admin_courses_list", {});
-    renderCoursesTable(data.items||[]);
-    fillDropdowns(data.items||[]);
-    updateLinks();
-  }catch(e){
-    alert(e.message||e);
+  let all = [];
+
+  function setLinks(course, section){
+    // نخزن مرة واحدة + كل الصفحات تستخدم localStorage
+    localStorage.setItem("admin_course", course||"");
+    localStorage.setItem("admin_section", section||"");
+
+    lnkAttendance.href = "attendance.html?admin=1";
+    lnkGrades.href     = "grades.html?admin=1";
+    lnkPolicies.href   = "policies.html?admin=1";
+    lnkPlan.href       = "plan.html?admin=1";
+    lnkReminders.href  = "dashboard.html?admin=1"; // إن كنت تستخدم نفس صفحة dashboard للتذكيرات، أو عدّل لرابط reminders.html لو عندك
   }
-}
 
-async function addCourse(){
-  try{
-    await api("admin_courses_add", { course:newCourse.value.trim(), section:newSection.value.trim() });
-    newCourse.value=""; newSection.value="";
-    const data = await api("admin_courses_list", {});
-    renderCoursesTable(data.items||[]);
-    fillDropdowns(data.items||[]);
-  }catch(e){
-    alert(e.message||e);
+  function rebuildDropdowns(){
+    // courses unique
+    const courses = [...new Set(all.map(x=>x.course_code))];
+    courseSel.innerHTML = courses.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+
+    const savedCourse = localStorage.getItem("admin_course") || courses[0] || "";
+    courseSel.value = savedCourse;
+
+    rebuildSections();
   }
-}
 
-async function delCourse(id){
-  if(!confirm("حذف هذا العنصر؟")) return;
-  try{
-    await api("admin_courses_delete", { id });
-    const data = await api("admin_courses_list", {});
-    renderCoursesTable(data.items||[]);
-    fillDropdowns(data.items||[]);
-  }catch(e){
-    alert(e.message||e);
+  function rebuildSections(){
+    const course = courseSel.value;
+    const sections = all.filter(x=>x.course_code===course).map(x=>x.section);
+    sectionSel.innerHTML = sections.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
+
+    const savedSec = localStorage.getItem("admin_section") || sections[0] || "";
+    if (sections.includes(savedSec)) sectionSel.value = savedSec;
+
+    meta.textContent = `المقرر: ${courseSel.value || "-"} | الشعبة: ${sectionSel.value || "-"}`;
+    setLinks(courseSel.value, sectionSel.value);
   }
-}
 
-function applySelection(){
-  const c = courseSel.value;
-  const s = sectionSel.value;
-  if(!c){ selMsg.textContent="اختر المقرر أولًا"; return; }
-  setAdminSelection(c, s);
-  selMsg.textContent = `تم التحديد: المقرر ${c} ${s?("| الشعبة "+s):"(بدون شعبة)"}`;
-  updateLinks();
-}
+  async function init(){
+    try{
+      const data = await api("admin_courses_list", {});
+      all = data.courses || [];
+      if (!all.length){
+        meta.textContent = "لا توجد مقررات/شعب. استخدم إضافة مقرر/شعبة.";
+        return;
+      }
+      rebuildDropdowns();
+      courseSel.onchange = rebuildSections;
+      sectionSel.onchange = rebuildSections;
+    }catch(e){
+      alert(e.message || e);
+    }
+  }
 
-init();
+  function applySelection(){
+    meta.textContent = `تم اختيار: ${courseSel.value} / ${sectionSel.value}`;
+    setLinks(courseSel.value, sectionSel.value);
+  }
+
+  async function addCourse(){
+    addMsg.textContent = "جاري الإضافة...";
+    try{
+      await api("admin_courses_add", {
+        course_code: newCourse.value.trim(),
+        section: newSection.value.trim(),
+        title: ""
+      });
+      addMsg.textContent = "تمت الإضافة.";
+      // refresh
+      const data = await api("admin_courses_list", {});
+      all = data.courses || [];
+      rebuildDropdowns();
+    }catch(e){
+      addMsg.textContent = e.message || e;
+    }
+  }
+
+  init();
 </script>
 </body>
 </html>

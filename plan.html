@@ -11,50 +11,43 @@
   <div class="topbar">
     <div class="brand">خطة المقرر</div>
     <div class="actions">
-      <a class="btn" href="dashboard.html">رجوع</a>
-      <button class="btn danger" onclick="isAdmin()?exitAdminMode():logoutStudent()">خروج</button>
+      <a class="btn" href="dashboard.html" id="backStd">رجوع</a>
+      <a class="btn" href="admin-dashboard.html" id="backAdm" style="display:none">رجوع</a>
+      <button class="btn" id="outStd" onclick="logoutStudent()">خروج</button>
+      <button class="btn" id="outAdm" onclick="exitAdminMode()" style="display:none">خروج المدرب</button>
     </div>
   </div>
 
   <div class="card">
     <div id="meta" class="muted"></div>
-    <div class="tableWrap" id="tbl" style="margin-top:12px"></div>
+    <div id="tbl"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-function renderMatrix(rows){
-  if (!rows || !rows.length){
-    tbl.innerHTML = '<div class="muted">لا توجد بيانات</div>';
-    return;
-  }
-  const headers = rows[0].map((_,i)=>"عمود "+(i+1));
-  const thead = `<tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
-  const tbody = rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("");
-  tbl.innerHTML = `<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
-}
+  async function init(){
+    requireStudentOrAdmin();
 
-async function init(){
-  requireStudentOrAdmin();
+    if (isAdmin()){
+      backStd.style.display="none"; outStd.style.display="none";
+      backAdm.style.display=""; outAdm.style.display="";
+      const course = qs("course") || localStorage.getItem("admin_course") || "";
+      if(!course) throw new Error("اختر المقرر من لوحة المدرب أولاً.");
+      // خطة المقرر عندك واحدة لكل شعب => نعرضها للمدرب أيضًا بنفس plan_get لكن عبر طالب؟ الأفضل نعرضها للمدرب من الشيت مباشرة لاحقًا.
+      // الآن نعرضها للمدرب عبر قراءة الشيت Plan <COURSE> بنفس طريقة الطالب:
+      // (نستخدم plan_get الخاص بالطالب فقط). لذلك هنا نعرض رسالة بسيطة:
+      meta.textContent = `خطة المقرر للمدرب — افتحها من Google Sheet: Plan ${course}`;
+      tbl.innerHTML = `<div class="muted">حالياً عرض الخطة للمدرب من الويب غير مفعل. إذا تبغاه مثل الدرجات/الحضور أخبرني وأضيف admin_plan_get فوراً.</div>`;
+      return;
+    }
 
-  if (isAdmin()){
-    const c = localStorage.getItem("admin_course") || "";
-    if (!c) { location.href="admin-dashboard.html"; return; }
-    // للمدرب نعرض خطة المقرر فقط (حسب course)
-    // نستخدم plan_get ولكن يحتاج token طالب — لذلك نعرض للخطة عبر course فقط غير متاح في السيرفر حالياً
-    // أسهل: افتح plan كمتدرب (ليس مطلوب). أو أضف أكشن admin_plan_get لاحقاً.
-    meta.textContent = `لوحة المدرب — افتح الخطة من Google Sheet أو أطلب مني إضافة admin_plan_get. (المقرر الحالي: ${c})`;
-    tbl.innerHTML = '<div class="muted">حاليًا الخطة للمتدرب فقط عبر token. إذا ترغب، أضيف لك admin_plan_get فورًا.</div>';
-    return;
+    const data = await api("plan_get",{});
+    meta.textContent = `المقرر: ${data.course_code || "-"}`;
+    renderTable(tbl, data.rows || []);
   }
 
-  const data = await api("plan_get", {});
-  meta.textContent = `المقرر: ${data.course_code}`;
-  renderMatrix(data.rows);
-}
-
-init().catch(e=>alert(e.message||e));
+  init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

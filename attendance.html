@@ -3,45 +3,58 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>سجل الحضور والغياب</title>
+  <title>سجل الحضور</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <div class="container">
   <div class="topbar">
-    <div class="brand">سجل الحضور والغياب</div>
+    <div class="brand">سجل الحضور</div>
     <div class="actions">
       <a class="btn" href="dashboard.html">رجوع</a>
-      <button class="btn" onclick="isAdmin()?logoutAdmin():logoutStudent()">خروج</button>
+      <button class="btn danger" onclick="isAdmin()?exitAdminMode():logoutStudent()">خروج</button>
     </div>
   </div>
 
   <div class="card">
     <div id="meta" class="muted"></div>
-    <div id="tbl" style="margin-top:10px"></div>
+    <div class="tableWrap" id="tbl" style="margin-top:12px"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
+function renderTable(headers, rows){
+  if (!headers || !headers.length){
+    tbl.innerHTML = '<div class="muted">لا توجد بيانات</div>';
+    return;
+  }
+  const thead = `<tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
+  const tbody = rows.map(r=>`<tr>${headers.map(h=>`<td>${esc(r[h])}</td>`).join("")}</tr>`).join("");
+  tbl.innerHTML = `<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
 async function init(){
   requireStudentOrAdmin();
 
   if (isAdmin()){
-    const course = qs("course") || getAdminCourse();
-    const section = qs("section") || getAdminSection();
-    if (!course) { location.href="admin-dashboard.html"; return; }
-    const data = await api("admin_attendance_get",{ course, section });
-    meta.textContent = `عرض المدرب — المقرر: ${data.course} — الشعبة: ${data.section || "كل الشعب"} — (${data.sheet})`;
-    renderTable(tbl, data.headers, data.rows);
+    const c = localStorage.getItem("admin_course") || "";
+    const s = localStorage.getItem("admin_section") || "";
+    if (!c) { location.href = "admin-dashboard.html"; return; }
+
+    const data = await api("admin_attendance_get", { course_code: c, section: s });
+    meta.textContent = `عرض المدرب — المقرر: ${data.course_code} — الشعبة: ${data.section || "بدون"}`;
+    renderTable(data.headers, data.rows);
     return;
   }
 
-  const st = getStudent();
-  const data = await api("attendance_get",{});
-  meta.textContent = `حضورك — المقرر: ${st.course} — الشعبة: ${st.section} — (${data.sheet})`;
-  renderTable(tbl, data.headers, data.rows);
+  const data = await api("attendance_get", {});
+  meta.textContent = `عرض متدرب — المقرر: ${data.course_code} — الشعبة: ${data.section || "بدون"}`;
+  const row = data.row || {};
+  const headers = data.headers || Object.keys(row);
+  renderTable(headers, Object.keys(row).length ? [row] : []);
 }
+
 init().catch(e=>alert(e.message||e));
 </script>
 </body>

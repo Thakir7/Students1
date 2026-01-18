@@ -15,7 +15,7 @@
 
   <div class="card">
     <div class="h2">تسجيل الدخول (Firebase)</div>
-    <div class="muted" id="apiInfo">—</div>
+    <div class="muted">خاص بالمدرب/المدير فقط</div>
 
     <div class="row" style="margin-top:12px">
       <input id="email" class="input" type="email" placeholder="البريد الإلكتروني">
@@ -31,7 +31,7 @@
   </div>
 </div>
 
-<script src="assets/app.js?v=adminfix1"></script>
+<script src="assets/app.js"></script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
@@ -48,56 +48,40 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const $ = (id)=>document.getElementById(id);
 
-  // اعرض API_URL ونسخة meta للتأكد أنك على Deploy الصحيح
-  (async ()=>{
-    try{
-      const r = await fetch(API_URL, { method:"POST", body: JSON.stringify({ action:"meta" }) });
-      const j = await r.json();
-      $("apiInfo").textContent = `API: ${API_URL} — Version: ${j.version || "?"}`;
-    }catch(e){
-      $("apiInfo").textContent = `API: ${API_URL} — meta failed`;
-    }
-  })();
+  const msg = document.getElementById("msg");
+  const btnLogin = document.getElementById("btnLogin");
+  const btnClear = document.getElementById("btnClear");
 
-  $("btnLogin").onclick = async () => {
-    $("msg").textContent = "جاري تسجيل الدخول...";
+  btnLogin.onclick = async () => {
+    msg.textContent = "جاري تسجيل الدخول...";
     try{
-      const userCred = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value);
+      const userCred = await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
       const idToken = await userCred.user.getIdToken(true);
 
-      $("msg").textContent = "جاري التحقق من صلاحية المدرب...";
-      const res = await fetch(API_URL, {
-        method:"POST",
-        body: JSON.stringify({ action:"admin_login", firebase_token: idToken })
-      });
-      const data = await res.json();
-
-      if(!data.ok){
-        // هنا ستظهر لك الآن تفاصيل: mismatch أو tokeninfo 400 ..الخ
-        const extra = [
-          data.adminEmailInSettings ? `AdminEmail(Settings): ${data.adminEmailInSettings}` : "",
-          data.tokenEmail ? `TokenEmail: ${data.tokenEmail}` : ""
-        ].filter(Boolean).join(" | ");
-        $("msg").textContent = "فشل الدخول: " + (data.message || "unauthorized") + (extra ? (" — " + extra) : "");
-        return;
-      }
-
+      // حفظ وضع المدرب
       localStorage.setItem("firebase_token", idToken);
       localStorage.setItem("mode", "admin");
-      $("msg").textContent = "تم الدخول ✅";
-      location.href = "admin-dashboard.html?v=adminfix1";
+
+      // ✅ تحقق من الـ WebApp (action=admin_login)
+      await api("admin_login", {});
+
+      msg.textContent = "تم الدخول بنجاح.";
+      location.href = "admin-dashboard.html";
+
     }catch(e){
-      $("msg").textContent = "فشل الدخول: " + (e?.message || e);
+      msg.textContent = "فشل الدخول: " + (e?.message || e);
+      console.error(e);
     }
   };
 
-  $("btnClear").onclick = async () => {
+  btnClear.onclick = async () => {
     try{ await signOut(auth); }catch(_){}
     localStorage.removeItem("firebase_token");
     localStorage.removeItem("mode");
-    $("msg").textContent = "تم مسح دخول المدرب.";
+    localStorage.removeItem("admin_course");
+    localStorage.removeItem("admin_section");
+    msg.textContent = "تم مسح دخول المدرب.";
   };
 </script>
 </body>

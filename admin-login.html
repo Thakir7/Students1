@@ -15,7 +15,7 @@
 
   <div class="card">
     <div class="h2">تسجيل الدخول (Firebase)</div>
-    <div class="muted">خاص بالمدرب/المدير فقط</div>
+    <div class="muted" id="apiInfo">—</div>
 
     <div class="row" style="margin-top:12px">
       <input id="email" class="input" type="email" placeholder="البريد الإلكتروني">
@@ -31,7 +31,7 @@
   </div>
 </div>
 
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=adminfix1"></script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
@@ -48,33 +48,46 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-
   const $ = (id)=>document.getElementById(id);
+
+  // اعرض API_URL ونسخة meta للتأكد أنك على Deploy الصحيح
+  (async ()=>{
+    try{
+      const r = await fetch(API_URL, { method:"POST", body: JSON.stringify({ action:"meta" }) });
+      const j = await r.json();
+      $("apiInfo").textContent = `API: ${API_URL} — Version: ${j.version || "?"}`;
+    }catch(e){
+      $("apiInfo").textContent = `API: ${API_URL} — meta failed`;
+    }
+  })();
 
   $("btnLogin").onclick = async () => {
     $("msg").textContent = "جاري تسجيل الدخول...";
     try{
       const userCred = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value);
-      const token = await userCred.user.getIdToken(true);
+      const idToken = await userCred.user.getIdToken(true);
 
-      // اختبار صلاحية المدرب على GAS (هذا اللي كان يعطي unauthorized)
       $("msg").textContent = "جاري التحقق من صلاحية المدرب...";
       const res = await fetch(API_URL, {
         method:"POST",
-        body: JSON.stringify({ action:"admin_login", firebase_token: token })
+        body: JSON.stringify({ action:"admin_login", firebase_token: idToken })
       });
       const data = await res.json();
 
       if(!data.ok){
-        $("msg").textContent = "فشل الدخول: " + (data.message || "unauthorized");
+        // هنا ستظهر لك الآن تفاصيل: mismatch أو tokeninfo 400 ..الخ
+        const extra = [
+          data.adminEmailInSettings ? `AdminEmail(Settings): ${data.adminEmailInSettings}` : "",
+          data.tokenEmail ? `TokenEmail: ${data.tokenEmail}` : ""
+        ].filter(Boolean).join(" | ");
+        $("msg").textContent = "فشل الدخول: " + (data.message || "unauthorized") + (extra ? (" — " + extra) : "");
         return;
       }
 
-      // نجاح
-      localStorage.setItem("firebase_token", token);
+      localStorage.setItem("firebase_token", idToken);
       localStorage.setItem("mode", "admin");
       $("msg").textContent = "تم الدخول ✅";
-      location.href = "admin-dashboard.html";
+      location.href = "admin-dashboard.html?v=adminfix1";
     }catch(e){
       $("msg").textContent = "فشل الدخول: " + (e?.message || e);
     }

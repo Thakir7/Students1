@@ -10,12 +10,7 @@
 <div class="container">
   <div class="topbar">
     <div class="brand">خطة المقرر</div>
-    <div class="actions">
-      <a class="btn" href="dashboard.html" id="backStd">رجوع</a>
-      <a class="btn" href="admin-dashboard.html" id="backAdm" style="display:none">رجوع</a>
-      <button class="btn" id="outStd" onclick="logoutStudent()">خروج</button>
-      <button class="btn" id="outAdm" onclick="exitAdminMode()" style="display:none">خروج المدرب</button>
-    </div>
+    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
   <div class="card">
@@ -26,28 +21,15 @@
 
 <script src="assets/app.js"></script>
 <script>
-  async function init(){
-    requireStudentOrAdmin();
-
-    if (isAdmin()){
-      backStd.style.display="none"; outStd.style.display="none";
-      backAdm.style.display=""; outAdm.style.display="";
-      const course = qs("course") || localStorage.getItem("admin_course") || "";
-      if(!course) throw new Error("اختر المقرر من لوحة المدرب أولاً.");
-      // خطة المقرر عندك واحدة لكل شعب => نعرضها للمدرب أيضًا بنفس plan_get لكن عبر طالب؟ الأفضل نعرضها للمدرب من الشيت مباشرة لاحقًا.
-      // الآن نعرضها للمدرب عبر قراءة الشيت Plan <COURSE> بنفس طريقة الطالب:
-      // (نستخدم plan_get الخاص بالطالب فقط). لذلك هنا نعرض رسالة بسيطة:
-      meta.textContent = `خطة المقرر للمدرب — افتحها من Google Sheet: Plan ${course}`;
-      tbl.innerHTML = `<div class="muted">حالياً عرض الخطة للمدرب من الويب غير مفعل. إذا تبغاه مثل الدرجات/الحضور أخبرني وأضيف admin_plan_get فوراً.</div>`;
-      return;
-    }
-
-    const data = await api("plan_get",{});
-    meta.textContent = `المقرر: ${data.course_code || "-"}`;
-    renderTable(tbl, data.rows || []);
-  }
-
-  init().catch(e=>alert(e.message||e));
+async function init(){
+  requireStudentOrAdmin();
+  const sel = getSelection();
+  if (!sel.course) throw new Error("اختر المقرر أولاً");
+  const data = await api("plan_get", { course_code: sel.course });
+  meta.textContent = `المقرر: ${data.course_code}`;
+  renderTable(tbl, data.headers||[], data.rows||[]);
+}
+init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

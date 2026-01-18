@@ -3,32 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>التذكيرات</title>
+  <title>التقويم</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <div class="container">
   <div class="topbar">
-    <div class="brand">التذكيرات</div>
+    <div class="brand">التقويم</div>
     <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
   <div class="card">
-    <div id="meta" class="muted"></div>
-    <div id="list"></div>
+    <div class="h2">التذكيرات</div>
+    <div id="rems"></div>
   </div>
 
-  <div class="card" id="adminBox" style="display:none">
-    <div class="h2">إضافة تذكير (للمدرب)</div>
-    <div class="grid" style="margin-top:12px">
-      <input id="title" class="input" placeholder="عنوان التذكير">
-      <input id="endAt" class="input" placeholder="وقت النهاية مثال: 2026-01-18 18:30">
-    </div>
-    <input id="note" class="input" style="margin-top:10px" placeholder="ملاحظة (اختياري)">
-    <div class="row" style="margin-top:12px">
-      <button class="btn primary" onclick="add()">إضافة</button>
-      <div id="msg" class="muted"></div>
-    </div>
+  <div class="card">
+    <div class="h2">التقويم الدراسي</div>
+    <iframe id="cal" style="width:100%;height:720px;border:1px solid var(--border);border-radius:16px;"></iframe>
   </div>
 </div>
 
@@ -36,40 +28,20 @@
 <script>
 async function init(){
   requireStudentOrAdmin();
-  const sel = getSelection();
-  if (!sel.course) throw new Error("اختر المقرر أولاً");
+  const c = await api("contact_get", {});
+  cal.src = c.calendarUrl || "https://thakir7.github.io/calendar-site/";
 
-  meta.textContent = `المقرر: ${sel.course}`;
-  if (isAdmin()) adminBox.style.display="block";
-  await load();
-}
+  const r = await api("reminders_get", {});
+  const items = r.items || [];
+  if (!items.length){ rems.innerHTML = `<div class="muted">لا توجد تذكيرات</div>`; return; }
 
-async function load(){
-  const sel = getSelection();
-  const data = await api("reminders_get", { course_code: sel.course });
-  const items = data.items||[];
-  if (!items.length){ list.innerHTML = `<div class="muted">لا توجد تذكيرات</div>`; return; }
-
-  list.innerHTML = items.map(it=>{
+  rems.innerHTML = items.map(it=>{
     const cls = `rem ${it.expired?'expired':''} ${it.expired?'':'red'}`;
     return `<div class="${cls}">
       <div><b>${esc(it.title)}</b></div>
       <div class="muted">${esc(it.endAt)} ${it.note?("— "+esc(it.note)):""}</div>
     </div>`;
   }).join("");
-}
-
-async function add(){
-  msg.textContent="جاري الإضافة...";
-  try{
-    const sel = getSelection();
-    await api("admin_reminders_add", { course_code: sel.course, title: title.value, endAt: endAt.value, note: note.value });
-    msg.textContent="تمت الإضافة ✅";
-    title.value=""; endAt.value=""; note.value="";
-    await load();
-  }catch(e){
-    msg.textContent = e.message || "فشل";
-  }
 }
 init().catch(e=>alert(e.message||e));
 </script>

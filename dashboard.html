@@ -18,16 +18,7 @@
   <div class="card">
     <div class="h2">بيانات المتدرب</div>
     <div id="info" class="muted"></div>
-
-    <div class="grid" style="margin-top:12px">
-      <select id="course"></select>
-      <select id="section"></select>
-    </div>
-
-    <div class="row" style="margin-top:12px">
-      <button class="btn primary" onclick="applySel()">تطبيق</button>
-      <div id="selMsg" class="muted"></div>
-    </div>
+    <div id="courseBox" class="row" style="margin-top:10px"></div>
   </div>
 
   <div class="card">
@@ -37,13 +28,13 @@
       <a class="btn" href="grades.html">سجل الدرجات</a>
       <a class="btn" href="plan.html">خطة المقرر</a>
       <a class="btn" href="policies.html">سياسات المقرر التدريبي</a>
-      <a class="btn" href="calendar.html">التقويم/التذكيرات</a>
+      <a class="btn" href="calendar.html">التقويم</a>
       <a class="btn" href="contact.html">التواصل مع المدرب</a>
     </div>
   </div>
 
   <div class="card">
-    <div class="h2">التذكيرات (حسب المقرر)</div>
+    <div class="h2">التذكيرات (حسب مقرر المتدرب)</div>
     <div id="rems"></div>
   </div>
 </div>
@@ -52,25 +43,23 @@
 <script>
 async function init(){
   requireStudentOrAdmin();
-  if (isAdmin()) { location.href="admin-dashboard.html"; return; }
+  if (isAdmin()){ location.href="admin-dashboard.html"; return; }
 
-  const st = getStudent();
-  info.textContent = st ? `الاسم: ${st.name} — الرقم التدريبي: ${st.training_id} — الجوال: ${st.phone}` : "";
+  const me = await api("me", {});
+  saveSession(me);
+  const st = me.student;
 
-  await loadStudentCourses(course, section);
-  await loadReminders();
-}
-function applySel(){
-  setSelection(course.value, section.value);
-  selMsg.textContent = `تم الحفظ: ${course.value} — ${section.value}`;
-  loadReminders();
-}
-async function loadReminders(){
-  const sel = getSelection();
-  if (!sel.course){ rems.innerHTML = `<div class="muted">اختر المقرر أولاً</div>`; return; }
-  const data = await api("reminders_get", { course_code: sel.course });
-  const items = data.items || [];
+  info.textContent = `الاسم: ${st.name} — الرقم التدريبي: ${st.training_id} — الجوال: ${st.phone}`;
+  courseBox.innerHTML = `
+    <span class="badge">المقرر: ${esc(st.course||"-")}</span>
+    <span class="badge">الشعبة: ${esc(st.section||"-")}</span>
+  `;
+
+  // reminders
+  const r = await api("reminders_get", {});
+  const items = r.items || [];
   if (!items.length){ rems.innerHTML = `<div class="muted">لا توجد تذكيرات</div>`; return; }
+
   rems.innerHTML = items.map(it=>{
     const cls = `rem ${it.expired?'expired':''} ${it.expired?'':'red'}`;
     return `<div class="${cls}">

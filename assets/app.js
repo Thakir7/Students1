@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbyI_XnCXFhfR1lYgzhwfUyl2YLqfUeGqdjf5p8k_KsOMNRFx-vsmh2-pXGz1mTH2SzU/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbybAM9n9-cgwej7Kwjt55OYgVpR2DyGk8jNQIRexWAecWsuj5QUulkeOegDuoeYFJ5Ibw/exec";
 
 function esc(s){ return String(s??"").replace(/[&<>"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m])); }
 

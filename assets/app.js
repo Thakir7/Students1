@@ -1,28 +1,23 @@
+// === Students1 Frontend Helper (assets/app.js) ===
+// ضع رابط WebApp هنا:
+const API_URL = "https://script.google.com/macros/s/AKfycbwzwkOnIy38TN67Kt26sIvzy7mhVjCCZmpD7YjA_S6ZmtT3qgTC0nFuPb9_BYmYUrewMA/exec";
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwzwkOnIy38TN67Kt26sIvzy7mhVjCCZmpD7YjA_S6ZmtT3qgTC0nFuPb9_BYmYUrewMA/exec";  // مثال: https://script.google.com/macros/s/XXXX/exec
-
+// -------------------- Session --------------------
 function saveSession(data){
-  if (data.token) localStorage.setItem("token", data.token);
-  if (data.student) localStorage.setItem("student", JSON.stringify(data.student));
+  localStorage.setItem("token", data.token || "");
+  localStorage.setItem("student", JSON.stringify(data.student || {}));
 }
 function getToken(){ return localStorage.getItem("token"); }
 function getStudent(){ return JSON.parse(localStorage.getItem("student") || "null"); }
 
+// Admin mode + firebase token
 function isAdmin(){
   return localStorage.getItem("mode") === "admin" && !!localStorage.getItem("firebase_token");
 }
-
-function requireStudent(){
-  if (!getToken()) location.href = "index.html";
-}
-function requireAdmin(){
-  if (!isAdmin()) location.href = "admin-login.html";
-}
 function requireStudentOrAdmin(){
   if (isAdmin()) return;
-  requireStudent();
+  if (!getToken()) location.href = "index.html";
 }
-
 function logoutStudent(){
   localStorage.removeItem("token");
   localStorage.removeItem("student");
@@ -36,6 +31,19 @@ function exitAdminMode(){
   location.href = "index.html";
 }
 
+// -------------------- Selection (FIX setSelection) --------------------
+function setSelection(course, section){
+  localStorage.setItem("admin_course", course || "");
+  localStorage.setItem("admin_section", section || "");
+}
+function getSelection(){
+  return {
+    course: localStorage.getItem("admin_course") || "",
+    section: localStorage.getItem("admin_section") || ""
+  };
+}
+
+// -------------------- API --------------------
 async function api(action, payload = {}){
   const body = JSON.stringify({
     action,
@@ -44,18 +52,16 @@ async function api(action, payload = {}){
     ...payload
   });
 
-  const res = await fetch(API_URL, { method:"POST", body });
-  const data = await res.json().catch(()=>({ok:false, message:"تعذر قراءة الرد"}));
+  const res = await fetch(API_URL, { method: "POST", body });
+  const data = await res.json().catch(()=>({ ok:false, message:"فشل قراءة الرد" }));
   if (!data.ok) throw new Error(data.message || "خطأ");
   return data;
 }
 
-// querystring helper
+// -------------------- Utils --------------------
 function qs(k){ return new URLSearchParams(location.search).get(k); }
-
-// escape html
 function esc(s){
-  return String(s??"").replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[m]));
+  return String(s ?? "").replace(/[&<>"']/g, m => (
+    { "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]
+  ));
 }

@@ -10,10 +10,7 @@
 <div class="container">
   <div class="topbar">
     <div class="brand">سجل الحضور</div>
-    <div class="actions">
-      <a class="btn" href="dashboard.html">رجوع</a>
-      <button class="btn" onclick="isAdmin()?exitAdminMode():logoutStudent()">خروج</button>
-    </div>
+    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
   <div class="card">
@@ -26,16 +23,16 @@
 <script>
 async function init(){
   requireStudentOrAdmin();
-  const sel = getSelection();
 
   if (isAdmin()){
+    const sel = getAdminSelection();
     if (!sel.course || !sel.section) throw new Error("اختر المقرر والشعبة من لوحة المدرب أولاً");
     const data = await api("admin_attendance_get", { course_code: sel.course, section: sel.section });
-    meta.textContent = `عرض المدرب — المقرر: ${data.course_code||sel.course} — الشعبة: ${data.section||sel.section}`;
+    meta.textContent = `عرض المدرب — ${sel.course} — ${sel.section}`;
     renderTable(tbl, data.headers||[], data.rows||[]);
   }else{
-    const data = await api("attendance_get", { course_code: sel.course, section: sel.section });
-    meta.textContent = `عرض متدرب — المقرر: ${data.course_code||sel.course} — الشعبة: ${data.section||sel.section}`;
+    const data = await api("attendance_get", {});
+    meta.textContent = `عرض المتدرب — ${data.course_code||""} — ${data.section||""}`;
     renderTable(tbl, data.headers||[], data.rows||[]);
   }
 }

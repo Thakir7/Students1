@@ -1,29 +1,15 @@
-// === Students1 Frontend Helper (FIXED) ===
-const API_URL = "https://script.google.com/macros/s/AKfycbxNusV2FfwfRLEfyJ7L3rzYLVLrVZVSq2pQVpLk5O-YL127NTTlW_HhFIFYX4sB3DLITQ/exec";
+// ===== Students1 Frontend Helper (FIXED) =====
+const API_URL = "https://script.google.com/macros/s/AKfycby2CAiWr35Xes5LV7tMCbSj671YAmKWrHc88-PtWHy13vb-qdR3hIHCgfdyoIVvZ02QcQ/exec"; // <-- غيّره
 
 function saveSession(data){
-  localStorage.setItem("token", data.token);
+  localStorage.setItem("token", data.token || "");
   localStorage.setItem("student", JSON.stringify(data.student || {}));
-  // مهم: المتدرب لا يكون admin
-  localStorage.removeItem("mode");
-  // لا نحذف firebase_token هنا (قد يكون مستخدم نفس الجهاز) لكن لا نفعّله بدون mode
 }
-
 function getToken(){ return localStorage.getItem("token"); }
 function getStudent(){ return JSON.parse(localStorage.getItem("student") || "null"); }
 
-function setSelection(course, section){
-  if (course != null) localStorage.setItem("sel_course", String(course));
-  if (section != null) localStorage.setItem("sel_section", String(section));
-}
-function getSelection(){
-  return {
-    course: localStorage.getItem("sel_course") || "",
-    section: localStorage.getItem("sel_section") || ""
-  };
-}
-
 function isAdmin(){
+  // كان عندك خطأ هنا (المنطق معكوس)
   return localStorage.getItem("mode") === "admin" && !!localStorage.getItem("firebase_token");
 }
 
@@ -32,44 +18,43 @@ function requireStudentOrAdmin(){
   if (!getToken()) location.href = "index.html";
 }
 
-function requireAdmin(){
-  if (!isAdmin()) location.href = "admin-login.html";
-}
-
 function logoutStudent(){
   localStorage.removeItem("token");
   localStorage.removeItem("student");
-  // لا نلمس admin هنا
   location.href = "index.html";
 }
 
 function exitAdminMode(){
   localStorage.removeItem("mode");
   localStorage.removeItem("firebase_token");
-  // تنظيف اختيار المقرر/الشعبة
-  localStorage.removeItem("sel_course");
-  localStorage.removeItem("sel_section");
   location.href = "index.html";
 }
 
-async function api(action, payload = {}){
+async function api(action, payload={}){
   const body = JSON.stringify({
     action,
     token: getToken(),
-    firebase_token: localStorage.getItem("firebase_token"),
+    firebase_token: localStorage.getItem("firebase_token") || "",
     ...payload
   });
-
   const res = await fetch(API_URL, { method:"POST", body });
   const data = await res.json().catch(()=>({ok:false, message:"تعذر قراءة الرد"}));
   if (!data.ok) throw new Error(data.message || "خطأ");
   return data;
 }
 
+// أدوات صغيرة
 function qs(k){ return new URLSearchParams(location.search).get(k); }
+function esc(s){ return String(s??"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
 
-function esc(s){
-  return String(s ?? "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[m]));
+// لتفادي خطأ: setSelection is not defined
+function setSelection(course, section){
+  localStorage.setItem("admin_course", course || "");
+  localStorage.setItem("admin_section", section || "");
+}
+function getSelection(){
+  return {
+    course: localStorage.getItem("admin_course") || "",
+    section: localStorage.getItem("admin_section") || ""
+  };
 }

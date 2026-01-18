@@ -15,24 +15,22 @@
 
   <div class="card">
     <div class="h2">تسجيل الدخول (Firebase)</div>
-    <div class="muted">بعد الدخول سيتم التحقق من الصلاحية عبر GAS (AdminEmail).</div>
+    <div class="muted">خاص بالمدرب/المدير فقط</div>
 
-    <div class="row" style="margin-top:12px">
+    <div class="grid" style="margin-top:12px">
       <input id="email" class="input" type="email" placeholder="البريد الإلكتروني">
       <input id="pass" class="input" type="password" placeholder="كلمة المرور">
     </div>
 
     <div class="row" style="margin-top:12px">
       <button class="btn primary" onclick="login()">دخول</button>
-      <button class="btn" onclick="clearAdmin()">مسح</button>
+      <button class="btn" onclick="clearLogin()">مسح الدخول</button>
+      <div id="msg" class="muted"></div>
     </div>
-
-    <div id="msg" class="muted" style="margin-top:12px"></div>
   </div>
 </div>
 
-<script src="assets/app.js?v=4"></script>
-
+<script src="assets/app.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
@@ -58,23 +56,20 @@
       localStorage.setItem("firebase_token", token);
       localStorage.setItem("mode", "admin");
 
-      // تحقق صلاحية الأدمن من GAS
+      // validate with GAS (checks Settings.AdminEmail)
       await api("admin_login", {});
-      location.href = "admin-dashboard.html?v=4";
 
+      location.href = "admin-dashboard.html";
     }catch(e){
-      msg.textContent = "فشل: " + (e?.message || e);
-      try{ await signOut(auth); }catch(_){}
-      localStorage.removeItem("firebase_token");
-      localStorage.removeItem("mode");
+      msg.textContent = "فشل الدخول: " + (e?.message || e);
     }
   };
 
-  window.clearAdmin = async function(){
+  window.clearLogin = async function(){
     try{ await signOut(auth); }catch(_){}
     localStorage.removeItem("firebase_token");
     localStorage.removeItem("mode");
-    msg.textContent = "تم المسح.";
+    msg.textContent = "تم مسح دخول المدرب.";
   };
 </script>
 </body>

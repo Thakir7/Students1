@@ -11,10 +11,8 @@
   <div class="topbar">
     <div class="brand">سجل الحضور</div>
     <div class="actions">
-      <a class="btn" href="dashboard.html" id="backStd">رجوع</a>
-      <a class="btn" href="admin-dashboard.html" id="backAdm" style="display:none">رجوع</a>
-      <button class="btn" id="outStd" onclick="logoutStudent()">خروج</button>
-      <button class="btn" id="outAdm" onclick="exitAdminMode()" style="display:none">خروج المدرب</button>
+      <a class="btn" href="dashboard.html">رجوع</a>
+      <button class="btn" onclick="isAdmin()?exitAdminMode():logoutStudent()">خروج</button>
     </div>
   </div>
 
@@ -26,31 +24,22 @@
 
 <script src="assets/app.js"></script>
 <script>
-  async function init(){
-    requireStudentOrAdmin();
+async function init(){
+  requireStudentOrAdmin();
+  const sel = getSelection();
 
-    if (isAdmin()){
-      backStd.style.display="none";
-      outStd.style.display="none";
-      backAdm.style.display="";
-      outAdm.style.display="";
-
-      const course = qs("course") || localStorage.getItem("admin_course") || "";
-      const section = qs("section") || localStorage.getItem("admin_section") || "";
-      if(!section) throw new Error("اختر الشعبة من لوحة المدرب أولاً.");
-
-      const data = await api("admin_attendance_get", { section, course_code: course });
-      meta.textContent = `عرض المدرب — المقرر: ${course || "-"} | الشعبة: ${section || "-"}`;
-      renderTable(tbl, data.rows || []);
-      return;
-    }
-
-    const data = await api("attendance_get",{});
-    meta.textContent = `عرض المتدرب — المقرر: ${data.course_code || "-"} | الشعبة: ${data.section || "-"}`;
-    renderTable(tbl, data.rows || []);
+  if (isAdmin()){
+    if (!sel.course || !sel.section) throw new Error("اختر المقرر والشعبة من لوحة المدرب أولاً");
+    const data = await api("admin_attendance_get", { course_code: sel.course, section: sel.section });
+    meta.textContent = `عرض المدرب — المقرر: ${data.course_code||sel.course} — الشعبة: ${data.section||sel.section}`;
+    renderTable(tbl, data.headers||[], data.rows||[]);
+  }else{
+    const data = await api("attendance_get", { course_code: sel.course, section: sel.section });
+    meta.textContent = `عرض متدرب — المقرر: ${data.course_code||sel.course} — الشعبة: ${data.section||sel.section}`;
+    renderTable(tbl, data.headers||[], data.rows||[]);
   }
-
-  init().catch(e=>alert(e.message||e));
+}
+init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

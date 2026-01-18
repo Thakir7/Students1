@@ -32,11 +32,11 @@
 </div>
 
 <script src="assets/app.js"></script>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
-  // ✅ نفس بيانات مشروعك
   const firebaseConfig = {
     apiKey: "AIzaSyB99dmAbCJclwyipiM3f7pm9M1tofL6nZU",
     authDomain: "students1-bb615.firebaseapp.com",
@@ -51,28 +51,33 @@
 
   const $ = (id)=>document.getElementById(id);
 
-  $("btnLogin").onclick = async () => {
+  $("btnLogin").onclick = async ()=>{
     $("msg").textContent = "جاري تسجيل الدخول...";
     try{
       const userCred = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value);
-      const idToken = await userCred.user.getIdToken(true);
+      const token = await userCred.user.getIdToken(true);
 
-      // خزّن التوكن
-      localStorage.setItem("firebase_token", idToken);
+      // نخزن مؤقتاً ثم نتحقق من السيرفر
+      localStorage.setItem("firebase_token", token);
       localStorage.setItem("mode", "admin");
 
-      // ✅ نتحقق عبر GAS (admin_login)
-      const res = await api("admin_login", {});
-      if (!res.ok) throw new Error(res.message || "فشل الدخول");
+      // تحقق على GAS (هذا هو المهم)
+      await api("admin_login", {});
 
-      $("msg").textContent = "تم الدخول بنجاح ✅";
+      $("msg").textContent = "تم تسجيل الدخول بنجاح ✅";
       location.href = "admin-dashboard.html";
+
     }catch(e){
+      // تنظيف كامل لتجنب بقاء وضع admin
+      try{ await signOut(auth); }catch(_){}
+      localStorage.removeItem("firebase_token");
+      localStorage.removeItem("mode");
+
       $("msg").textContent = "فشل الدخول: " + (e?.message || e);
     }
   };
 
-  $("btnClear").onclick = async () => {
+  $("btnClear").onclick = async ()=>{
     try{ await signOut(auth); }catch(_){}
     localStorage.removeItem("firebase_token");
     localStorage.removeItem("mode");

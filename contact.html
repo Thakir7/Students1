@@ -9,35 +9,20 @@
 <body>
 <div class="container">
   <div class="topbar">
-    <div class="brand">التواصل</div>
-    <div class="actions">
-      <a class="btn" href="dashboard.html" id="b1">رجوع</a>
-      <a class="btn" href="admin-dashboard.html?v=4" id="b2" style="display:none">رجوع</a>
-    </div>
+    <div class="brand">التواصل مع المدرب</div>
+    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
   <div class="card">
-    <div class="h2">طرق التواصل</div>
-    <div class="muted" id="m"></div>
-    <div style="margin-top:12px">
-      <a class="btn primary" href="mailto:thakerg@tvtc.gov.sa">إرسال بريد للمدرب</a>
+    <div class="h2">بيانات التواصل</div>
+    <div class="muted">يمكنك وضع وسائل التواصل في صفحة Settings لاحقاً (TrainerEmail / TrainerPhone)</div>
+    <div class="row" style="margin-top:12px">
+      <span class="badge">البريد: thakerg@tvtc.gov.sa</span>
     </div>
   </div>
 </div>
 
-<script src="assets/app.js?v=4"></script>
-<script>
-  (function(){
-    if(isAdmin()){
-      b1.style.display="none";
-      b2.style.display="";
-      m.textContent = "أنت داخل كمدرب. يمكنك التواصل عبر البريد.";
-    }else{
-      requireStudentOrAdmin();
-      const s = getStudent() || {};
-      m.textContent = `المتدرب: ${s.name||"-"} | المقرر: ${s.course||"-"} | الشعبة: ${s.section||"-"}`;
-    }
-  })();
-</script>
+<script src="assets/app.js"></script>
+<script>requireStudentOrAdmin();</script>
 </body>
 </html>

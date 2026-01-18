@@ -10,64 +10,59 @@
 <div class="container">
   <div class="topbar">
     <div class="brand">سياسات المقرر التدريبي</div>
-    <div class="actions">
-      <a class="btn" href="dashboard.html" id="backStd">رجوع</a>
-      <a class="btn" href="admin-dashboard.html" id="backAdm" style="display:none">رجوع</a>
-      <button class="btn" id="outStd" onclick="logoutStudent()">خروج</button>
-      <button class="btn" id="outAdm" onclick="exitAdminMode()" style="display:none">خروج المدرب</button>
-    </div>
+    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
   <div class="card">
     <div id="meta" class="muted"></div>
+    <div id="view"></div>
 
-    <textarea id="txt" class="input" style="min-height:260px;white-space:pre-wrap"></textarea>
-
-    <div class="row" style="margin-top:12px" id="adminBar" style="display:none">
-      <button class="btn primary" onclick="save()">حفظ</button>
-      <div id="msg" class="muted"></div>
+    <div id="adminBox" style="display:none;margin-top:14px">
+      <div class="h2">إضافة/تعديل (للمدرب)</div>
+      <textarea id="txt" rows="10" class="input" placeholder="اكتب كل سياسة في سطر"></textarea>
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" onclick="save()">حفظ</button>
+        <div id="msg" class="muted"></div>
+      </div>
     </div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-  async function init(){
-    requireStudentOrAdmin();
+async function init(){
+  requireStudentOrAdmin();
+  const sel = getSelection();
+  if (!sel.course) throw new Error("اختر المقرر أولاً");
 
-    if (isAdmin()){
-      backStd.style.display="none"; outStd.style.display="none";
-      backAdm.style.display=""; outAdm.style.display="";
-      adminBar.style.display="flex";
-
-      const course = qs("course") || localStorage.getItem("admin_course") || "";
-      if(!course) throw new Error("اختر المقرر من لوحة المدرب أولاً.");
-
-      const data = await api("admin_policies_get", { course_code: course });
-      meta.textContent = `عرض/تعديل المدرب — المقرر: ${course}`;
-      txt.value = data.text || "";
-      return;
-    }
-
-    adminBar.style.display="none";
-    txt.setAttribute("readonly","readonly");
-    const data = await api("policies_get",{});
-    meta.textContent = `المقرر: ${data.course_code || "-"}`;
-    txt.value = data.text || "";
+  if (isAdmin()){
+    adminBox.style.display="block";
+    const data = await api("admin_policies_get", { course_code: sel.course });
+    meta.textContent = `المقرر: ${sel.course}`;
+    txt.value = (data.lines||[]).join("\n");
+    renderLines(data.lines||[]);
+  }else{
+    const data = await api("policies_get", { course_code: sel.course });
+    meta.textContent = `المقرر: ${sel.course}`;
+    renderLines(data.lines||[]);
   }
-
-  async function save(){
-    msg.textContent = "جاري الحفظ...";
-    try{
-      const course = localStorage.getItem("admin_course") || "";
-      await api("admin_policies_set", { course_code: course, text: txt.value });
-      msg.textContent = "تم الحفظ.";
-    }catch(e){
-      msg.textContent = e.message || String(e);
-    }
+}
+function renderLines(lines){
+  if (!lines.length){ view.innerHTML = `<div class="muted">لا توجد سياسات</div>`; return; }
+  view.innerHTML = `<ul>${lines.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+}
+async function save(){
+  msg.textContent = "جاري الحفظ...";
+  try{
+    const sel = getSelection();
+    await api("admin_policies_set", { course_code: sel.course, text: txt.value });
+    msg.textContent = "تم الحفظ ✅";
+    renderLines(txt.value.split("\n").map(x=>x.trim()).filter(Boolean));
+  }catch(e){
+    msg.textContent = e.message || "فشل";
   }
-
-  init().catch(e=>alert(e.message||e));
+}
+init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

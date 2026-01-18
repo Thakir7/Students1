@@ -3,37 +3,75 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>التقويم</title>
+  <title>التذكيرات</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <div class="container">
   <div class="topbar">
-    <div class="brand">التقويم</div>
-    <div class="actions">
-      <a class="btn" href="dashboard.html" id="b1">رجوع</a>
-      <a class="btn" href="admin-dashboard.html?v=4" id="b2" style="display:none">رجوع</a>
-    </div>
+    <div class="brand">التذكيرات</div>
+    <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
   <div class="card">
-    <div class="h2">التقويم</div>
-    <div class="muted">
-      هذه صفحة التقويم (مفعلة الآن). إذا تبغى ربطها بتبويب Google Sheet للأحداث أو تقويم أم القرى، قلّي وش اسم الشيت وأربطها لك مباشرة.
+    <div id="meta" class="muted"></div>
+    <div id="list"></div>
+  </div>
+
+  <div class="card" id="adminBox" style="display:none">
+    <div class="h2">إضافة تذكير (للمدرب)</div>
+    <div class="grid" style="margin-top:12px">
+      <input id="title" class="input" placeholder="عنوان التذكير">
+      <input id="endAt" class="input" placeholder="وقت النهاية مثال: 2026-01-18 18:30">
+    </div>
+    <input id="note" class="input" style="margin-top:10px" placeholder="ملاحظة (اختياري)">
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" onclick="add()">إضافة</button>
+      <div id="msg" class="muted"></div>
     </div>
   </div>
 </div>
 
-<script src="assets/app.js?v=4"></script>
+<script src="assets/app.js"></script>
 <script>
-  (function(){
-    if(isAdmin()){
-      b1.style.display="none";
-      b2.style.display="";
-    }else{
-      requireStudentOrAdmin();
-    }
-  })();
+async function init(){
+  requireStudentOrAdmin();
+  const sel = getSelection();
+  if (!sel.course) throw new Error("اختر المقرر أولاً");
+
+  meta.textContent = `المقرر: ${sel.course}`;
+  if (isAdmin()) adminBox.style.display="block";
+  await load();
+}
+
+async function load(){
+  const sel = getSelection();
+  const data = await api("reminders_get", { course_code: sel.course });
+  const items = data.items||[];
+  if (!items.length){ list.innerHTML = `<div class="muted">لا توجد تذكيرات</div>`; return; }
+
+  list.innerHTML = items.map(it=>{
+    const cls = `rem ${it.expired?'expired':''} ${it.expired?'':'red'}`;
+    return `<div class="${cls}">
+      <div><b>${esc(it.title)}</b></div>
+      <div class="muted">${esc(it.endAt)} ${it.note?("— "+esc(it.note)):""}</div>
+    </div>`;
+  }).join("");
+}
+
+async function add(){
+  msg.textContent="جاري الإضافة...";
+  try{
+    const sel = getSelection();
+    await api("admin_reminders_add", { course_code: sel.course, title: title.value, endAt: endAt.value, note: note.value });
+    msg.textContent="تمت الإضافة ✅";
+    title.value=""; endAt.value=""; note.value="";
+    await load();
+  }catch(e){
+    msg.textContent = e.message || "فشل";
+  }
+}
+init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

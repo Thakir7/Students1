@@ -1,6 +1,6 @@
 // === Students1 Frontend Helper (assets/app.js) ===
 // ضع رابط WebApp هنا:
-const API_URL = "https://script.google.com/macros/s/AKfycbwzwkOnIy38TN67Kt26sIvzy7mhVjCCZmpD7YjA_S6ZmtT3qgTC0nFuPb9_BYmYUrewMA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbw1Fc-4Vb_eST-8eY1aukpXaI3vim_FQVflbL_uEDPFLnRdKmQmWCGXJt2sM7-tSrpKng/exec";
 
 // -------------------- Session --------------------
 function saveSession(data){

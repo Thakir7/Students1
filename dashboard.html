@@ -17,52 +17,69 @@
 
   <div class="card">
     <div class="h2">بيانات المتدرب</div>
-    <div id="meta" class="muted"></div>
+    <div id="info" class="muted"></div>
 
-    <div class="row" style="margin-top:12px; gap:10px; flex-wrap:wrap">
-      <a class="btn" href="grades.html">سجل الدرجات</a>
-      <a class="btn" href="attendance.html">سجل الحضور والغياب</a>
-      <a class="btn" href="plan.html">خطة المقرر</a>
-      <a class="btn" href="policies.html">سياسات المقرر التدريبي</a>
+    <div class="grid" style="margin-top:12px">
+      <select id="course"></select>
+      <select id="section"></select>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" onclick="applySel()">تطبيق</button>
+      <div id="selMsg" class="muted"></div>
     </div>
   </div>
 
   <div class="card">
-    <div class="h2">التذكيرات</div>
-    <div class="muted">التذكير الأحمر = فعّال، وإذا انتهى وقت الانتهاء يظهر بخط في الوسط.</div>
-    <div id="rem"></div>
+    <div class="h2">الخدمات</div>
+    <div class="row">
+      <a class="btn" href="attendance.html">سجل الحضور والغياب</a>
+      <a class="btn" href="grades.html">سجل الدرجات</a>
+      <a class="btn" href="plan.html">خطة المقرر</a>
+      <a class="btn" href="policies.html">سياسات المقرر التدريبي</a>
+      <a class="btn" href="calendar.html">التقويم/التذكيرات</a>
+      <a class="btn" href="contact.html">التواصل مع المدرب</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="h2">التذكيرات (حسب المقرر)</div>
+    <div id="rems"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-  async function init(){
-    requireStudentOrAdmin();
-    const me = await api("me", {});
-    const s = me.student || {};
-    meta.textContent = `الاسم: ${s.name || "-"} | الرقم: ${s.training_id || "-"} | المقرر: ${s.course || "-"} | الشعبة: ${s.section || "-"}`;
+async function init(){
+  requireStudentOrAdmin();
+  if (isAdmin()) { location.href="admin-dashboard.html"; return; }
 
-    const r = await api("reminders_get",{});
-    const rows = r.rows || [];
-    if(!rows.length){ rem.innerHTML = `<div class="muted">لا يوجد تذكيرات.</div>`; return; }
+  const st = getStudent();
+  info.textContent = st ? `الاسم: ${st.name} — الرقم التدريبي: ${st.training_id} — الجوال: ${st.phone}` : "";
 
-    const now = Date.now();
-    rem.innerHTML = rows.map(x=>{
-      const end = Date.parse(x.ends_at);
-      const expired = !isNaN(end) && end < now;
-      return `
-        <div style="padding:10px;border:1px solid #e7e7e7;border-radius:12px;margin:8px 0">
-          <div style="font-weight:700; color:#b00020; ${expired?'text-decoration:line-through;opacity:.65':''}">
-            ${esc(x.title)}
-          </div>
-          <div class="muted" style="${expired?'text-decoration:line-through;opacity:.65':''}">
-            ينتهي: ${esc(x.ends_at)} ${x.note?(" | "+esc(x.note)):""}
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
-  init().catch(e=>alert(e.message||e));
+  await loadStudentCourses(course, section);
+  await loadReminders();
+}
+function applySel(){
+  setSelection(course.value, section.value);
+  selMsg.textContent = `تم الحفظ: ${course.value} — ${section.value}`;
+  loadReminders();
+}
+async function loadReminders(){
+  const sel = getSelection();
+  if (!sel.course){ rems.innerHTML = `<div class="muted">اختر المقرر أولاً</div>`; return; }
+  const data = await api("reminders_get", { course_code: sel.course });
+  const items = data.items || [];
+  if (!items.length){ rems.innerHTML = `<div class="muted">لا توجد تذكيرات</div>`; return; }
+  rems.innerHTML = items.map(it=>{
+    const cls = `rem ${it.expired?'expired':''} ${it.expired?'':'red'}`;
+    return `<div class="${cls}">
+      <div><b>${esc(it.title)}</b></div>
+      <div class="muted">${esc(it.endAt)} ${it.note?("— "+esc(it.note)):""}</div>
+    </div>`;
+  }).join("");
+}
+init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

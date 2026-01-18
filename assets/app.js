@@ -1,5 +1,5 @@
 // === Students1 Frontend Helper (FIXED) ===
-const API_URL = "https://script.google.com/macros/s/AKfycbw1Fc-4Vb_eST-8eY1aukpXaI3vim_FQVflbL_uEDPFLnRdKmQmWCGXJt2sM7-tSrpKng/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxNusV2FfwfRLEfyJ7L3rzYLVLrVZVSq2pQVpLk5O-YL127NTTlW_HhFIFYX4sB3DLITQ/exec";
 
 function saveSession(data){
   localStorage.setItem("token", data.token);

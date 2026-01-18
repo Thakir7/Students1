@@ -23,11 +23,18 @@
 <script>
 async function init(){
   requireStudentOrAdmin();
-  const sel = getSelection();
-  if (!sel.course) throw new Error("اختر المقرر أولاً");
-  const data = await api("plan_get", { course_code: sel.course });
-  meta.textContent = `المقرر: ${data.course_code}`;
-  renderTable(tbl, data.headers||[], data.rows||[]);
+
+  if (isAdmin()){
+    const sel = getAdminSelection();
+    if (!sel.course) throw new Error("اختر المقرر من لوحة المدرب أولاً");
+    const data = await api("plan_get", { /* للمدرب نستخدم نفس action لكن السيرفر يحتاج student token، لذلك لا تستخدمه هنا */ });
+    // إذا تبغى خطة للمدرب: خلها صفحة مستقلة لاحقاً أو استخدم نفس شيت Plan من جهة الواجهة مباشرة.
+    throw new Error("خطة المقرر للمدرب: اعرضها للمتدرب فقط حالياً (حسب طلبك).");
+  }else{
+    const data = await api("plan_get", {});
+    meta.textContent = `المقرر: ${data.course_code||""}`;
+    renderTable(tbl, data.headers||[], data.rows||[]);
+  }
 }
 init().catch(e=>alert(e.message||e));
 </script>

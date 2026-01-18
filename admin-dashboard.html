@@ -16,181 +16,62 @@
   </div>
 
   <div class="card">
-    <div class="h2">تشخيص سريع</div>
-    <div class="muted" id="diag"></div>
-    <div class="row" style="margin-top:10px; gap:10px">
-      <button class="btn" onclick="runDiag()">تحديث التشخيص</button>
-      <button class="btn" onclick="hardReload()">تحديث قوي (كسر كاش)</button>
-    </div>
-  </div>
-
-  <div class="card">
     <div class="h2">اختيار المقرر والشعبة</div>
-    <div class="row" style="gap:10px; margin-top:10px">
-      <select id="courseSel" class="input"></select>
-      <select id="sectionSel" class="input"></select>
-      <button class="btn primary" onclick="applyCtx()">تطبيق</button>
+    <div class="grid" style="margin-top:12px">
+      <select id="course"></select>
+      <select id="section"></select>
     </div>
-    <div id="ctx" class="muted" style="margin-top:10px"></div>
 
-    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
-      <a class="btn" id="goGrades" href="grades.html">سجل الدرجات</a>
-      <a class="btn" id="goAtt" href="attendance.html">سجل الحضور</a>
-      <a class="btn" id="goPlan" href="plan.html">خطة المقرر</a>
-      <a class="btn" id="goPol" href="policies.html">سياسات المقرر</a>
-      <a class="btn" id="goContact" href="contact.html">التواصل</a>
-      <a class="btn" id="goCal" href="calendar.html">التقويم</a>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" onclick="applySel()">تطبيق</button>
+      <div id="selMsg" class="muted"></div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <a class="btn" href="attendance.html">سجل الحضور</a>
+      <a class="btn" href="grades.html">سجل الدرجات</a>
+      <a class="btn" href="plan.html">خطة المقرر</a>
+      <a class="btn" href="policies.html">سياسات المقرر</a>
+      <a class="btn" href="calendar.html">التذكيرات</a>
+      <a class="btn" href="contact.html">بيانات التواصل</a>
     </div>
   </div>
 
   <div class="card">
     <div class="h2">إضافة مقرر/شعبة (إلى شيت Course)</div>
-    <div class="row" style="gap:10px; margin-top:10px">
+    <div class="grid" style="margin-top:12px">
       <input id="newCourse" class="input" placeholder="Course مثال: INET111">
       <input id="newSection" class="input" placeholder="Section مثال: INET111 2">
-      <button class="btn" onclick="addCourse()">إضافة</button>
     </div>
-    <div id="addMsg" class="muted" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" onclick="addCourse()">إضافة</button>
+      <div id="addMsg" class="muted"></div>
+    </div>
   </div>
 </div>
 
-<script src="assets/app.js?v=4"></script>
+<script src="assets/app.js"></script>
 <script>
-  let all = [];
-
-  function hardReload(){
-    // يضيف باراميتر وقت لكسر الكاش
-    location.href = "admin-dashboard.html?v=" + Date.now();
+async function init(){
+  if (!isAdmin()) location.href="admin-login.html";
+  await loadAdminCourses(course, section);
+}
+function applySel(){
+  setSelection(course.value, section.value);
+  selMsg.textContent = `تم الحفظ: ${course.value} — ${section.value}`;
+}
+async function addCourse(){
+  addMsg.textContent = "جاري الإضافة...";
+  try{
+    await api("admin_course_add", { course: newCourse.value, section: newSection.value });
+    addMsg.textContent = "تمت الإضافة ✅";
+    newCourse.value = ""; newSection.value = "";
+    await loadAdminCourses(course, section);
+  }catch(e){
+    addMsg.textContent = e.message || "فشل";
   }
-
-  function requireAdmin(){
-    if (!isAdmin()) location.href = "admin-login.html?v=4";
-  }
-
-  function unique(arr){ return [...new Set(arr.filter(Boolean))]; }
-
-  function fill(){
-    const courses = unique(all.map(x=>x.course));
-    courseSel.innerHTML = courses.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
-
-    const savedC = localStorage.getItem("admin_course") || courses[0] || "";
-    if (savedC) courseSel.value = savedC;
-
-    refreshSections();
-
-    const savedS = localStorage.getItem("admin_section") || "";
-    if (savedS) sectionSel.value = savedS;
-
-    updateLinks();
-  }
-
-  function refreshSections(){
-    const c = courseSel.value;
-    const secs = all.filter(x=>x.course===c).map(x=>x.section);
-    sectionSel.innerHTML = secs.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
-  }
-
-  function updateLinks(){
-    const c = courseSel.value || "";
-    const s = sectionSel.value || "";
-
-    ctx.textContent = `المقرر: ${c || "-"} | الشعبة: ${s || "-"}`;
-
-    localStorage.setItem("admin_course", c);
-    localStorage.setItem("admin_section", s);
-
-    const q = `?course=${encodeURIComponent(c)}&section=${encodeURIComponent(s)}&v=4`;
-    goGrades.href = "grades.html"+q;
-    goAtt.href   = "attendance.html"+q;
-    goPol.href   = "policies.html"+q;
-    goPlan.href  = "plan.html"+q;
-    goContact.href = "contact.html?v=4";
-    goCal.href = "calendar.html?v=4";
-  }
-
-  function applyCtx(){
-    refreshSections();
-    updateLinks();
-  }
-
-  async function addCourse(){
-    addMsg.textContent = "جاري الإضافة...";
-    try{
-      await api("admin_courses_upsert", {
-        course: (newCourse.value||"").trim(),
-        section: (newSection.value||"").trim(),
-        active: true
-      });
-      newCourse.value=""; newSection.value="";
-      addMsg.textContent = "تمت الإضافة.";
-      await loadCourses();
-    }catch(e){
-      addMsg.textContent = e.message || String(e);
-    }
-  }
-
-  async function runDiag(){
-    try{
-      requireAdmin();
-
-      let out = [];
-      out.push(`API_URL: ${API_URL}`);
-
-      // 1) تحقق admin_login
-      try{
-        await api("admin_login",{});
-        out.push("admin_login: ✅ OK");
-      }catch(e){
-        out.push("admin_login: ❌ " + (e.message||e));
-      }
-
-      // 2) meta
-      try{
-        const meta = await api("meta",{});
-        out.push("meta/actions: " + (meta.actions ? meta.actions.length : "-"));
-      }catch(e){
-        out.push("meta: ❌ " + (e.message||e));
-      }
-
-      // 3) courses list
-      try{
-        const data = await api("admin_courses_list",{});
-        out.push("Course rows: " + ((data.rows||[]).length));
-      }catch(e){
-        out.push("admin_courses_list: ❌ " + (e.message||e));
-      }
-
-      diag.innerHTML = out.map(x=>`<div>${esc(x)}</div>`).join("");
-    }catch(e){
-      diag.textContent = e.message || String(e);
-    }
-  }
-
-  async function loadCourses(){
-    requireAdmin();
-    // لو هنا فشل -> سوف يظهر في runDiag السبب
-    const data = await api("admin_courses_list",{});
-    all = data.rows || [];
-
-    if(!all.length){
-      courseSel.innerHTML = "";
-      sectionSel.innerHTML = "";
-      ctx.textContent = "⚠️ لا توجد مقررات فعالة في شيت Course (أو أنك على API_URL خاطئ). اضغط (تحديث التشخيص).";
-      return;
-    }
-    fill();
-  }
-
-  courseSel.addEventListener("change", ()=>{ refreshSections(); updateLinks(); });
-  sectionSel.addEventListener("change", ()=>updateLinks());
-
-  // تشغيل
-  (async ()=>{
-    await runDiag();
-    await loadCourses();
-  })().catch(e=>{
-    diag.textContent = e.message || String(e);
-  });
+}
+init().catch(e=>alert(e.message||e));
 </script>
 </body>
 </html>

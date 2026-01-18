@@ -10,36 +10,39 @@
 <div class="container">
   <div class="topbar">
     <div class="brand">بوابة المتدرب</div>
-    <div class="actions"></div>
+    <div class="actions"><a class="btn" href="admin-login.html">دخول المدرب</a></div>
   </div>
 
   <div class="card">
     <div class="h2">تسجيل دخول المتدرب</div>
     <div class="muted">أدخل الرقم التدريبي + آخر 4 أرقام من الهوية</div>
 
-    <div class="row" style="margin-top:12px; gap:10px">
+    <div class="grid" style="margin-top:12px">
       <input id="tid" class="input" inputmode="numeric" placeholder="الرقم التدريبي">
-      <input id="last4" class="input" inputmode="numeric" placeholder="آخر 4 أرقام من الهوية">
-      <button class="btn primary" onclick="loginStudent()">دخول</button>
+      <input id="last4" class="input" inputmode="numeric" maxlength="4" placeholder="آخر 4 أرقام من الهوية">
     </div>
 
-    <div id="msg" class="muted" style="margin-top:12px"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" onclick="login()">دخول</button>
+      <div id="msg" class="muted"></div>
+    </div>
   </div>
 </div>
 
-<script src="assets/app.js?v=4"></script>
+<script src="assets/app.js"></script>
 <script>
-async function loginStudent(){
+async function login(){
   msg.textContent = "جاري التحقق...";
   try{
-    const data = await api("student_login", {
-      training_id: tid.value,
-      last4: last4.value
-    });
+    const data = await api("student_login", { training_id: tid.value, last4: last4.value });
     saveSession(data);
-    location.href = "dashboard.html?v=4";
+    // default selection from student record
+    if (data.student){
+      setSelection(data.student.course||"", data.student.section||"");
+    }
+    location.href = "dashboard.html";
   }catch(e){
-    msg.textContent = e.message || String(e);
+    msg.textContent = e.message || "فشل الدخول";
   }
 }
 </script>

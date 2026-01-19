@@ -23,23 +23,23 @@
     </div>
 
     <div class="row" style="margin-top:12px">
-      <button class="btn primary" id="loginBtn">دخول</button>
-      <button class="btn" id="clearBtn">مسح الدخول</button>
+      <button id="btnLogin" class="btn primary">دخول</button>
+      <button id="btnClear" class="btn">مسح الدخول</button>
     </div>
 
     <div id="msg" class="muted" style="margin-top:12px"></div>
+    <div id="dbg" class="muted" style="margin-top:8px; font-size:12px; direction:ltr; text-align:left"></div>
   </div>
 </div>
-
-<!-- ضع رابط WebApp هنا -->
-<script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbziLEp9fOV6OVU8uOOOzCgQib1AomMACTXOEMx-OYUTXQH3S3pbx3-btJloSYHbjtJ54A/exec";
-</script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
+  // ✅ ضع رابط GAS WebApp هنا (نفس الموجود في assets/app.js)
+  const API_URL = "https://script.google.com/macros/s/AKfycbziLEp9fOV6OVU8uOOOzCgQib1AomMACTXOEMx-OYUTXQH3S3pbx3-btJloSYHbjtJ54A/exec";
+
+  // ✅ Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyB99dmAbCJclwyipiM3f7pm9M1tofL6nZU",
     authDomain: "students1-bb615.firebaseapp.com",
@@ -52,49 +52,55 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  const msg = document.getElementById("msg");
-  const email = document.getElementById("email");
-  const pass = document.getElementById("pass");
-  const loginBtn = document.getElementById("loginBtn");
-  const clearBtn = document.getElementById("clearBtn");
+  const $ = (id)=>document.getElementById(id);
+  const msg = $("msg");
+  const dbg = $("dbg");
 
-  async function callAdminLogin(firebaseToken){
-    const res = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "admin_login", firebase_token: firebaseToken })
-    });
+  async function api(action, payload={}){
+    const body = JSON.stringify({ action, ...payload });
+    const res = await fetch(API_URL, { method:"POST", body });
     const data = await res.json().catch(()=>({ok:false, message:"تعذر قراءة الرد"}));
-    if (!data.ok) throw new Error(data.message || "unauthorized");
+    if (!data.ok) throw new Error(data.message || "فشل");
     return data;
   }
 
-  loginBtn.addEventListener("click", async ()=>{
+  $("btnLogin").addEventListener("click", async ()=>{
     msg.textContent = "جاري تسجيل الدخول...";
+    dbg.textContent = "";
     try{
-      const userCred = await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
-      const token = await userCred.user.getIdToken(true);
+      const userCred = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value);
+      const idToken = await userCred.user.getIdToken(true);
 
-      // خزّن جلسة الادمن محلياً
-      localStorage.setItem("firebase_token", token);
+      // حفظ التوكن محلياً
+      localStorage.setItem("firebase_token", idToken);
       localStorage.setItem("mode", "admin");
 
-      // تحقق من السيرفر (GAS)
-      await callAdminLogin(token);
+      // ✅ تحقق وتسجيل دخول في GAS (يُرجع admin_token)
+      const r = await api("admin_login", { firebase_token: idToken });
 
-      // ادخل لوحة المدرب
+      // حفظ جلسة المدرب (admin_token)
+      localStorage.setItem("admin_token", r.admin_token || "");
+      localStorage.setItem("admin_email", r.email || "");
+      localStorage.setItem("admin_uid", r.uid || "");
+
+      msg.textContent = "تم الدخول بنجاح ✅";
+      // ✅ اذهب للوحة المدرب الصحيحة عندك
       location.href = "admin-dashboard.html";
     }catch(e){
-      localStorage.removeItem("firebase_token");
-      localStorage.removeItem("mode");
       msg.textContent = "فشل الدخول: " + (e?.message || e);
+      dbg.textContent = (e && e.stack) ? e.stack : "";
     }
   });
 
-  clearBtn.addEventListener("click", async ()=>{
+  $("btnClear").addEventListener("click", async ()=>{
     try{ await signOut(auth); }catch(_){}
     localStorage.removeItem("firebase_token");
     localStorage.removeItem("mode");
-    msg.textContent = "تم مسح الدخول.";
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_email");
+    localStorage.removeItem("admin_uid");
+    msg.textContent = "تم مسح دخول المدرب.";
+    dbg.textContent = "";
   });
 </script>
 </body>

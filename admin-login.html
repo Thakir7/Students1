@@ -23,23 +23,20 @@
     </div>
 
     <div class="row" style="margin-top:12px">
-      <button id="btnLogin" class="btn primary">دخول</button>
-      <button id="btnClear" class="btn">مسح الدخول</button>
+      <button class="btn primary" id="btnLogin">دخول</button>
+      <button class="btn" id="btnClear">مسح الدخول</button>
     </div>
 
     <div id="msg" class="muted" style="margin-top:12px"></div>
-    <div id="dbg" class="muted" style="margin-top:8px; font-size:12px; direction:ltr; text-align:left"></div>
   </div>
 </div>
+
+<script src="assets/app.js"></script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
-  // ✅ ضع رابط GAS WebApp هنا (نفس الموجود في assets/app.js)
-  const API_URL = "https://script.google.com/macros/s/AKfycbziLEp9fOV6OVU8uOOOzCgQib1AomMACTXOEMx-OYUTXQH3S3pbx3-btJloSYHbjtJ54A/exec";
-
-  // ✅ Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyB99dmAbCJclwyipiM3f7pm9M1tofL6nZU",
     authDomain: "students1-bb615.firebaseapp.com",
@@ -53,55 +50,31 @@
   const auth = getAuth(app);
 
   const $ = (id)=>document.getElementById(id);
-  const msg = $("msg");
-  const dbg = $("dbg");
 
-  async function api(action, payload={}){
-    const body = JSON.stringify({ action, ...payload });
-    const res = await fetch(API_URL, { method:"POST", body });
-    const data = await res.json().catch(()=>({ok:false, message:"تعذر قراءة الرد"}));
-    if (!data.ok) throw new Error(data.message || "فشل");
-    return data;
-  }
-
-  $("btnLogin").addEventListener("click", async ()=>{
-    msg.textContent = "جاري تسجيل الدخول...";
-    dbg.textContent = "";
+  $("btnLogin").onclick = async ()=>{
+    $("msg").textContent = "جاري تسجيل الدخول...";
     try{
       const userCred = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value);
-      const idToken = await userCred.user.getIdToken(true);
+      const uid = userCred.user.uid;
 
-      // حفظ التوكن محلياً
-      localStorage.setItem("firebase_token", idToken);
-      localStorage.setItem("mode", "admin");
+      // سجل دخول أدمن في GAS بواسطة UID فقط
+      const data = await api("admin_login", { firebase_uid: uid });
 
-      // ✅ تحقق وتسجيل دخول في GAS (يُرجع admin_token)
-      const r = await api("admin_login", { firebase_token: idToken });
+      // خزّن وضع الأدمن
+      setAdminSession(uid);
 
-      // حفظ جلسة المدرب (admin_token)
-      localStorage.setItem("admin_token", r.admin_token || "");
-      localStorage.setItem("admin_email", r.email || "");
-      localStorage.setItem("admin_uid", r.uid || "");
-
-      msg.textContent = "تم الدخول بنجاح ✅";
-      // ✅ اذهب للوحة المدرب الصحيحة عندك
+      $("msg").textContent = "تم الدخول بنجاح.";
       location.href = "admin-dashboard.html";
     }catch(e){
-      msg.textContent = "فشل الدخول: " + (e?.message || e);
-      dbg.textContent = (e && e.stack) ? e.stack : "";
+      $("msg").textContent = "فشل الدخول: " + (e?.message || e);
     }
-  });
+  };
 
-  $("btnClear").addEventListener("click", async ()=>{
+  $("btnClear").onclick = async ()=>{
     try{ await signOut(auth); }catch(_){}
-    localStorage.removeItem("firebase_token");
-    localStorage.removeItem("mode");
-    localStorage.removeItem("admin_token");
-    localStorage.removeItem("admin_email");
-    localStorage.removeItem("admin_uid");
-    msg.textContent = "تم مسح دخول المدرب.";
-    dbg.textContent = "";
-  });
+    clearAdminSession();
+    $("msg").textContent = "تم مسح دخول المدرب.";
+  };
 </script>
 </body>
 </html>

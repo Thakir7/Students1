@@ -1,5 +1,6 @@
-// === Students1 Frontend Helper (FINAL SPLIT SESSIONS) ===
-const API_URL = "https://script.google.com/macros/s/AKfycbziLEp9fOV6OVU8uOOOzCgQib1AomMACTXOEMx-OYUTXQH3S3pbx3-btJloSYHbjtJ54A/exec"
+// === Students1 Frontend Helper (FINAL / NO MIX SESSIONS) ===
+const API_URL = "https://script.google.com/macros/s/AKfycbziLEp9fOV6OVU8uOOOzCgQib1AomMACTXOEMx-OYUTXQH3S3pbx3-btJloSYHbjtJ54A/exec";
+
 // ---------------- Student session ----------------
 function setStudentSession(token, studentObj){
   localStorage.setItem("st_token", token || "");
@@ -34,6 +35,18 @@ function requireAdmin(){
   if (!isAdmin()) location.href = "admin-login.html";
 }
 
+// ---------------- Admin selection ----------------
+function setSelection(course, section){
+  localStorage.setItem("admin_course", course || "");
+  localStorage.setItem("admin_section", section || "");
+}
+function getSelection(){
+  return {
+    course: localStorage.getItem("admin_course") || "",
+    section: localStorage.getItem("admin_section") || ""
+  };
+}
+
 // ---------------- Common API ----------------
 async function api(action, payload={}){
   const body = JSON.stringify({
@@ -52,15 +65,3 @@ async function api(action, payload={}){
 // ---------------- Helpers ----------------
 function qs(k){ return new URLSearchParams(location.search).get(k); }
 function esc(s){ return String(s??"").replace(/[&<>"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m])); }
-
-// ---------------- Admin selection ----------------
-function setSelection(course, section){
-  localStorage.setItem("admin_course", course || "");
-  localStorage.setItem("admin_section", section || "");
-}
-function getSelection(){
-  return {
-    course: localStorage.getItem("admin_course") || "",
-    section: localStorage.getItem("admin_section") || ""
-  };
-}

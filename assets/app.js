@@ -1,6 +1,5 @@
 // === Students1 Frontend Helper (FINAL SPLIT SESSIONS) ===
-const API_URL = "https://script.google.com/macros/s/AKfycbziLEp9fOV6OVU8uOOOzCgQib1AomMACTXOEMx-OYUTXQH3S3pbx3-btJloSYHbjtJ54A/exec";  // ✅ نفس رابط GAS
-
+const API_URL = "https://script.google.com/macros/s/AKfycbziLEp9fOV6OVU8uOOOzCgQib1AomMACTXOEMx-OYUTXQH3S3pbx3-btJloSYHbjtJ54A/exec"
 // ---------------- Student session ----------------
 function setStudentSession(token, studentObj){
   localStorage.setItem("st_token", token || "");
@@ -43,6 +42,7 @@ async function api(action, payload={}){
     firebase_token: getAdminToken(),
     ...payload
   });
+
   const res = await fetch(API_URL, { method:"POST", body });
   const data = await res.json().catch(()=>({ok:false, message:"تعذر قراءة الرد"}));
   if (!data.ok) throw new Error(data.message || "خطأ");

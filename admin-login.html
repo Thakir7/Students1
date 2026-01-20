@@ -49,32 +49,33 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  const $ = (id)=>document.getElementById(id);
+  const elEmail = document.getElementById("email");
+  const elPass  = document.getElementById("pass");
+  const elMsg   = document.getElementById("msg");
 
-  $("btnLogin").onclick = async ()=>{
-    $("msg").textContent = "جاري تسجيل الدخول...";
+  document.getElementById("btnLogin").addEventListener("click", async ()=>{
+    elMsg.textContent = "جاري تسجيل الدخول...";
     try{
-      const userCred = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value);
-      const uid = userCred.user.uid;
+      const cred = await signInWithEmailAndPassword(auth, elEmail.value.trim(), elPass.value);
+      const token = await cred.user.getIdToken(true);
 
-      // سجل دخول أدمن في GAS بواسطة UID فقط
-      const data = await api("admin_login", { firebase_uid: uid });
+      // ✅ احفظ التوكن للوحة المدرب
+      setAdminToken(token);
 
-      // خزّن وضع الأدمن
-      setAdminSession(uid);
+      // ✅ تأكد أن السيرفر يستقبله
+      await api("admin_login", {});   // سيرسل firebase_token تلقائيا من app.js
 
-      $("msg").textContent = "تم الدخول بنجاح.";
       location.href = "admin-dashboard.html";
     }catch(e){
-      $("msg").textContent = "فشل الدخول: " + (e?.message || e);
+      elMsg.textContent = "فشل الدخول: " + (e?.message || e);
     }
-  };
+  });
 
-  $("btnClear").onclick = async ()=>{
+  document.getElementById("btnClear").addEventListener("click", async ()=>{
     try{ await signOut(auth); }catch(_){}
-    clearAdminSession();
-    $("msg").textContent = "تم مسح دخول المدرب.";
-  };
+    exitAdminMode();
+    elMsg.textContent = "تم مسح دخول المدرب.";
+  });
 </script>
 </body>
 </html>

@@ -5,39 +5,63 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>سياسات المقرر</title>
   <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .list{margin-top:12px;display:grid;gap:10px}
+    .item{border:1px solid #ddd;border-radius:12px;padding:10px;background:#fff}
+  </style>
 </head>
 <body>
 <div class="container">
   <div class="topbar">
-    <div class="brand">سياسات المقرر التدريبي</div>
+    <div class="brand">سياسات المقرر</div>
     <div class="actions"><a class="btn" href="dashboard.html">رجوع</a></div>
   </div>
 
   <div class="card">
-    <div id="meta" class="muted"></div>
-    <div id="view"></div>
+    <div id="head" class="muted"></div>
+    <div id="list" class="list"></div>
+    <div id="msg" class="muted" style="margin-top:10px"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-function renderLines(lines){
-  if (!lines.length){ view.innerHTML = `<div class="muted">لا توجد سياسات</div>`; return; }
-  view.innerHTML = `<ul>${lines.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
-}
-async function init(){
-  requireStudentOrAdmin();
+(async function(){
+  const mode = qs("mode");
+  const msg = document.getElementById("msg");
 
-  if (isAdmin()){
-    // سياسة المدرب موجودة في admin-dashboard/صفحة تعديل لاحقاً
-    throw new Error("سياسات المدرب: افتح صفحة لوحة المدرب (ميزة التعديل هناك).");
-  }else{
-    const data = await api("policies_get", {});
-    meta.textContent = `المقرر: ${data.course_code||""}`;
-    renderLines(data.lines||[]);
+  try{
+    let course="";
+    if(mode==="admin"){
+      requireAdmin();
+      course = qs("course") || getSelection().course;
+      if(!course) return location.href="admin-dashboard.html";
+    }else{
+      requireStudent();
+      const me = await api("me", {});
+      course = (me.student && me.student.course) || (getStudent()||{}).course || "";
+    }
+
+    document.getElementById("head").textContent = `المقرر: ${course}`;
+    const data = await api("policies_get", { course });
+    render(data.items || data.rows || []);
+  }catch(e){
+    msg.textContent = "خطأ: " + (e.message || e);
   }
-}
-init().catch(e=>alert(e.message||e));
+
+  function render(items){
+    const box = document.getElementById("list");
+    if(!items || !items.length){
+      box.innerHTML = `<div class="muted">لا توجد سياسات</div>`;
+      return;
+    }
+    box.innerHTML = items.map((x,i)=>`
+      <div class="item">
+        <b>${i+1}.</b> ${esc(x.text || x.policy || x.rule || x["السياسة"] || x["Policy"] || "")}
+      </div>
+    `).join("");
+  }
+})();
 </script>
 </body>
 </html>

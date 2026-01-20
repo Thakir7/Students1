@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>التواصل مع المدرب</title>
+  <title>التواصل</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -14,35 +14,38 @@
   </div>
 
   <div class="card">
-    <div class="h2">وسائل التواصل</div>
-    <div id="box" class="muted" style="margin-top:10px"></div>
+    <div class="h2">بيانات المدرب</div>
+    <div id="msg" class="muted" style="margin-top:10px"></div>
+
+    <div style="margin-top:12px">
+      <div><b>واتساب:</b> <a id="wa" href="#" class="btn">فتح واتساب</a></div>
+      <div style="margin-top:10px"><b>البريد:</b> <a id="mail" href="#" class="btn">إرسال بريد</a></div>
+    </div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-async function init(){
-  requireStudentOrAdmin();
-  const data = await api("contact_get", {});
-  const email = (data.trainerEmail||"").trim();
-  const phone = digitsOnly(data.trainerPhone||"");
+(async function(){
+  // يعمل للطالب والمدرب (عرض فقط)
+  const msg = document.getElementById("msg");
+  try{
+    const me = await api("me", {});
+    const contact = me.contact || {};
+    const email = contact.email || me.adminEmail || "thakerg@tvtc.gov.sa";
+    const phone = contact.phone || ""; // ضع رقمك هنا إن لم يأت من السيرفر: "9665XXXXXXXX"
 
-  const items = [];
-  if (phone){
-    items.push(`<a class="btn" target="_blank" href="https://wa.me/${phone}">واتساب: ${phone}</a>`);
-  }else{
-    items.push(`<div class="muted">رقم الواتساب غير مُحدد (ضع TrainerPhone في Settings)</div>`);
+    if(!phone){
+      msg.textContent = "ملاحظة: رقم الواتساب غير مضبوط في السيرفر. ضع الرقم في contact.html أو أضفه في GAS.";
+    }
+
+    const waLink = phone ? `https://wa.me/${phone.replace(/\D/g,"")}` : "#";
+    document.getElementById("wa").href = waLink;
+    document.getElementById("mail").href = `mailto:${email}`;
+  }catch(e){
+    msg.textContent = "خطأ: " + (e.message || e);
   }
-
-  if (email){
-    items.push(`<a class="btn" href="mailto:${email}">إيميل: ${esc(email)}</a>`);
-  }else{
-    items.push(`<div class="muted">الإيميل غير مُحدد</div>`);
-  }
-
-  box.innerHTML = `<div class="row">${items.join("")}</div>`;
-}
-init().catch(e=>alert(e.message||e));
+})();
 </script>
 </body>
 </html>

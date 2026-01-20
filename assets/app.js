@@ -1,56 +1,66 @@
-// === Students1 Frontend Helper (FINAL FIX) ===
-const API_URL = "https://script.google.com/macros/s/AKfycbziLEp9fOV6OVU8uOOOzCgQib1AomMACTXOEMx-OYUTXQH3S3pbx3-btJloSYHbjtJ54A/exec"; // <-- ضع
-function saveSession(data){
-  if (data && data.token) localStorage.setItem("token", data.token);
-  if (data && data.student) localStorage.setItem("student", JSON.stringify(data.student));
-}
-function getToken(){ return localStorage.getItem("token"); }
-function getStudent(){ return JSON.parse(localStorage.getItem("student") || "null"); }
+// === Students1 Frontend Helper (FINAL SPLIT SESSIONS) ===
+const API_URL = "https://script.google.com/macros/s/AKfycbziLEp9fOV6OVU8uOOOzCgQib1AomMACTXOEMx-OYUTXQH3S3pbx3-btJloSYHbjtJ54A/exec";  // ✅ نفس رابط GAS
 
-function setAdminToken(token){
-  localStorage.setItem("firebase_token", token || "");
-  localStorage.setItem("mode", "admin");
+// ---------------- Student session ----------------
+function setStudentSession(token, studentObj){
+  localStorage.setItem("st_token", token || "");
+  localStorage.setItem("st_student", JSON.stringify(studentObj || {}));
 }
-function getAdminToken(){
-  return localStorage.getItem("firebase_token") || "";
-}
-function isAdmin(){
-  return localStorage.getItem("mode") === "admin" && !!getAdminToken();
+function getStudentToken(){ return localStorage.getItem("st_token") || ""; }
+function getStudent(){ return JSON.parse(localStorage.getItem("st_student") || "null"); }
+function clearStudentSession(){
+  localStorage.removeItem("st_token");
+  localStorage.removeItem("st_student");
 }
 
-function requireStudentOrAdmin(){
-  if (isAdmin()) return;
-  if (!getToken()) location.href = "index.html";
+// ---------------- Admin session ----------------
+function setAdminSession(firebaseToken){
+  localStorage.setItem("ad_firebase_token", firebaseToken || "");
+  localStorage.setItem("ad_mode", "admin");
+}
+function getAdminToken(){ return localStorage.getItem("ad_firebase_token") || ""; }
+function isAdmin(){ return localStorage.getItem("ad_mode")==="admin" && !!getAdminToken(); }
+function clearAdminSession(){
+  localStorage.removeItem("ad_firebase_token");
+  localStorage.removeItem("ad_mode");
+  localStorage.removeItem("admin_course");
+  localStorage.removeItem("admin_section");
 }
 
-function logoutStudent(){
-  localStorage.removeItem("token");
-  localStorage.removeItem("student");
-  location.href = "index.html";
+// ---------------- Guards ----------------
+function requireStudent(){
+  if (!getStudentToken()) location.href = "index.html";
 }
-function exitAdminMode(){
-  localStorage.removeItem("mode");
-  localStorage.removeItem("firebase_token");
-  location.href = "index.html";
+function requireAdmin(){
+  if (!isAdmin()) location.href = "admin-login.html";
 }
 
-async function api(action, payload = {}){
+// ---------------- Common API ----------------
+async function api(action, payload={}){
   const body = JSON.stringify({
     action,
-    token: getToken(),
+    token: getStudentToken(),
     firebase_token: getAdminToken(),
     ...payload
   });
-
-  const res = await fetch(API_URL, { method: "POST", body });
+  const res = await fetch(API_URL, { method:"POST", body });
   const data = await res.json().catch(()=>({ok:false, message:"تعذر قراءة الرد"}));
   if (!data.ok) throw new Error(data.message || "خطأ");
   return data;
 }
 
-function qs(k){
-  return new URLSearchParams(location.search).get(k);
+// ---------------- Helpers ----------------
+function qs(k){ return new URLSearchParams(location.search).get(k); }
+function esc(s){ return String(s??"").replace(/[&<>"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m])); }
+
+// ---------------- Admin selection ----------------
+function setSelection(course, section){
+  localStorage.setItem("admin_course", course || "");
+  localStorage.setItem("admin_section", section || "");
 }
-function esc(s){
-  return String(s ?? "").replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function getSelection(){
+  return {
+    course: localStorage.getItem("admin_course") || "",
+    section: localStorage.getItem("admin_section") || ""
+  };
 }

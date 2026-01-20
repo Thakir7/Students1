@@ -24,7 +24,7 @@
 
     <div class="row" style="margin-top:12px">
       <button class="btn primary" id="btnLogin">دخول</button>
-      <button class="btn" id="btnClear">مسح الدخول</button>
+      <button class="btn" id="btnClear">مسح</button>
     </div>
 
     <div id="msg" class="muted" style="margin-top:12px"></div>
@@ -58,24 +58,19 @@
       const cred = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value);
       const token = await cred.user.getIdToken(true);
 
-      // ✅ حفظ جلسة المدرب منفصلة
-      setAdminSession(token);
-
-      // ✅ اختبار صلاحية الأدمن في GAS
-      await api("admin_login", {});
-
-      msg.textContent = "تم الدخول بنجاح ✅";
-      location.href = "admin-dashboard.html";
+      setAdminSession(token);                 // ✅ جلسة مدرب منفصلة
+      await api("admin_login", {});           // ✅ يتأكد من الصلاحية من GAS
+      location.href = "admin-dashboard.html"; // ✅ لوحة المدرب
     }catch(e){
-      msg.textContent = "فشل الدخول: " + (e?.message || e);
       clearAdminSession();
+      msg.textContent = "فشل الدخول: " + (e?.message || e);
     }
   });
 
   $("btnClear").addEventListener("click", async ()=>{
     try{ await signOut(auth); }catch(_){}
     clearAdminSession();
-    msg.textContent = "تم مسح دخول المدرب.";
+    msg.textContent = "تم مسح الدخول.";
   });
 </script>
 </body>

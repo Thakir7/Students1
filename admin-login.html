@@ -49,32 +49,33 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  const elEmail = document.getElementById("email");
-  const elPass  = document.getElementById("pass");
-  const elMsg   = document.getElementById("msg");
+  const $ = (id)=>document.getElementById(id);
+  const msg = $("msg");
 
-  document.getElementById("btnLogin").addEventListener("click", async ()=>{
-    elMsg.textContent = "جاري تسجيل الدخول...";
+  $("btnLogin").addEventListener("click", async ()=>{
+    msg.textContent = "جاري تسجيل الدخول...";
     try{
-      const cred = await signInWithEmailAndPassword(auth, elEmail.value.trim(), elPass.value);
+      const cred = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value);
       const token = await cred.user.getIdToken(true);
 
-      // ✅ احفظ التوكن للوحة المدرب
-      setAdminToken(token);
+      // ✅ حفظ جلسة المدرب منفصلة
+      setAdminSession(token);
 
-      // ✅ تأكد أن السيرفر يستقبله
-      await api("admin_login", {});   // سيرسل firebase_token تلقائيا من app.js
+      // ✅ اختبار صلاحية الأدمن في GAS
+      await api("admin_login", {});
 
+      msg.textContent = "تم الدخول بنجاح ✅";
       location.href = "admin-dashboard.html";
     }catch(e){
-      elMsg.textContent = "فشل الدخول: " + (e?.message || e);
+      msg.textContent = "فشل الدخول: " + (e?.message || e);
+      clearAdminSession();
     }
   });
 
-  document.getElementById("btnClear").addEventListener("click", async ()=>{
+  $("btnClear").addEventListener("click", async ()=>{
     try{ await signOut(auth); }catch(_){}
-    exitAdminMode();
-    elMsg.textContent = "تم مسح دخول المدرب.";
+    clearAdminSession();
+    msg.textContent = "تم مسح دخول المدرب.";
   });
 </script>
 </body>

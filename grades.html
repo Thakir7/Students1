@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>سجل الدرجات</title>
   <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .tableWrap{overflow:auto;margin-top:12px}
+    table{width:100%;border-collapse:collapse;min-width:720px}
+    th,td{border:1px solid #ddd;padding:8px;white-space:nowrap}
+    th{background:#f4f4f4}
+  </style>
 </head>
 <body>
 <div class="container">
@@ -14,29 +20,49 @@
   </div>
 
   <div class="card">
-    <div id="meta" class="muted"></div>
-    <div id="tbl"></div>
+    <div id="head" class="muted"></div>
+    <div class="tableWrap"><table id="tbl"></table></div>
+    <div id="msg" class="muted" style="margin-top:10px"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-async function init(){
-  requireStudentOrAdmin();
+(async function(){
+  const mode = qs("mode");
+  const msg = document.getElementById("msg");
 
-  if (isAdmin()){
-    const sel = getAdminSelection();
-    if (!sel.course || !sel.section) throw new Error("اختر المقرر والشعبة من لوحة المدرب أولاً");
-    const data = await api("admin_grades_get", { course_code: sel.course, section: sel.section });
-    meta.textContent = `عرض المدرب — ${sel.course} — ${sel.section}`;
-    renderTable(tbl, data.headers||[], data.rows||[]);
-  }else{
-    const data = await api("grades_get", {});
-    meta.textContent = `عرض المتدرب — ${data.course_code||""} — ${data.section||""}`;
-    renderTable(tbl, data.headers||[], data.rows||[]);
+  try{
+    let data;
+    if(mode==="admin"){
+      requireAdmin();
+      const course = qs("course") || getSelection().course;
+      const section = qs("section") || getSelection().section;
+      if(!course || !section) return location.href="admin-dashboard.html";
+      data = await api("admin_grades_get", { course, section });
+      document.getElementById("head").textContent = `المقرر: ${course} — الشعبة: ${section}`;
+    }else{
+      requireStudent();
+      data = await api("grades_get", {});
+      const st = getStudent() || {};
+      document.getElementById("head").textContent = `المتدرب: ${st.name||""} — المقرر: ${st.course||""} — الشعبة: ${st.section||""}`;
+    }
+
+    renderTable(data.table || data.rows || []);
+  }catch(e){
+    msg.textContent = "خطأ: " + (e.message || e);
   }
-}
-init().catch(e=>alert(e.message||e));
+
+  function renderTable(rows){
+    const tbl = document.getElementById("tbl");
+    if(!rows || !rows.length){ tbl.innerHTML="<tr><td>لا توجد بيانات</td></tr>"; return; }
+
+    const headers = Object.keys(rows[0]);
+    tbl.innerHTML =
+      `<tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>` +
+      rows.map(r=>`<tr>${headers.map(h=>`<td>${esc(r[h])}</td>`).join("")}</tr>`).join("");
+  }
+})();
 </script>
 </body>
 </html>

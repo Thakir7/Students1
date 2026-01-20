@@ -7,10 +7,9 @@
   <link rel="stylesheet" href="assets/style.css">
   <style>
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:720px){ .grid2{grid-template-columns:1fr} }
-    .links{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;margin-top:14px}
-    .links .btn{min-width:140px}
-    .mutedline{margin-top:10px}
+    @media (max-width:720px){.grid2{grid-template-columns:1fr}}
+    .links{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .links .btn{min-width:160px}
   </style>
 </head>
 <body>
@@ -18,7 +17,7 @@
   <div class="topbar">
     <div class="brand">لوحة المدرب</div>
     <div class="actions">
-      <button class="btn" onclick="exitAdminMode()">خروج المدرب</button>
+      <a class="btn" href="index.html" onclick="clearAdminSession()">خروج</a>
     </div>
   </div>
 
@@ -26,98 +25,53 @@
     <div class="h2">اختيار المقرر والشعبة</div>
 
     <div class="grid2" style="margin-top:12px">
-      <select id="courseSel" class="input">
-        <option value="">اختر المقرر</option>
-      </select>
-
-      <select id="sectionSel" class="input">
-        <option value="">اختر الشعبة</option>
-      </select>
+      <select id="courseSel" class="input"><option value="">اختر المقرر</option></select>
+      <select id="sectionSel" class="input"><option value="">اختر الشعبة</option></select>
     </div>
 
-    <div class="row" style="margin-top:12px; gap:10px">
+    <div class="row" style="margin-top:12px;gap:10px">
       <button class="btn primary" id="applyBtn">تطبيق</button>
       <div class="muted" id="status"></div>
     </div>
 
-    <div class="muted mutedline" id="picked"></div>
+    <div class="muted" id="picked" style="margin-top:10px"></div>
 
     <div class="links">
-      <a class="btn" id="btnGrades" href="#">سجل الدرجات</a>
       <a class="btn" id="btnAttendance" href="#">سجل الحضور</a>
+      <a class="btn" id="btnGrades" href="#">سجل الدرجات</a>
       <a class="btn" id="btnPlan" href="#">خطة المقرر</a>
       <a class="btn" id="btnPolicies" href="#">سياسات المقرر</a>
-      <a class="btn" id="btnCalendar" href="calendar.html">التقويم</a>
-      <a class="btn" id="btnContact" href="contact.html">بيانات التواصل</a>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:16px">
-    <div class="h2">إضافة مقرر/شعبة (إلى شيت Course)</div>
-    <div class="muted">سيتم ظهورها تلقائياً في القائمة المنسدلة إذا كانت Active = TRUE</div>
-
-    <div class="grid2" style="margin-top:12px">
-      <input id="newCourse" class="input" placeholder="Course مثال: INET111">
-      <input id="newSection" class="input" placeholder="Section مثال: INET111 2">
-    </div>
-    <div class="row" style="margin-top:12px">
-      <button class="btn" id="addBtn">إضافة</button>
-      <div class="muted" id="addMsg"></div>
+      <a class="btn" href="calendar.html">التقويم</a>
+      <a class="btn" href="contact.html">التواصل</a>
     </div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-  const courseSel  = document.getElementById("courseSel");
+  requireAdmin();
+
+  const courseSel = document.getElementById("courseSel");
   const sectionSel = document.getElementById("sectionSel");
-  const statusEl   = document.getElementById("status");
-  const pickedEl   = document.getElementById("picked");
+  const statusEl = document.getElementById("status");
+  const pickedEl = document.getElementById("picked");
 
-  const btnGrades     = document.getElementById("btnGrades");
   const btnAttendance = document.getElementById("btnAttendance");
-  const btnPlan       = document.getElementById("btnPlan");
-  const btnPolicies   = document.getElementById("btnPolicies");
+  const btnGrades = document.getElementById("btnGrades");
+  const btnPlan = document.getElementById("btnPlan");
+  const btnPolicies = document.getElementById("btnPolicies");
 
-  let allRows = []; // [{course, section, active}]
+  let rows = [];
 
-  function setStatus(t){ statusEl.textContent = t || ""; }
+  function setStatus(t){ statusEl.textContent = t||""; }
 
-  // ✅ هذه هي الدالة التي كانت ناقصة
-  async function loadAdminCourses(){
-    requireStudentOrAdmin(); // يسمح للأدمن أيضاً
-    if(!isAdmin()) { location.href="admin-login.html"; return; }
-
-    setStatus("جاري تحميل المقررات...");
-    const data = await api("admin_courses_list", {});
-    allRows = (data.rows || []).map(r => ({
-      course: (r.course||"").trim(),
-      section:(r.section||"").trim(),
-      active: String(r.active||"").toUpperCase().trim()
-    })).filter(r => r.course && r.section && (r.active==="" || r.active==="TRUE"));
-
-    // fill courses dropdown unique
-    const courses = [...new Set(allRows.map(r=>r.course))];
+  function fillCourses(){
+    const courses = [...new Set(rows.map(r=>r.course))];
     courseSel.innerHTML = `<option value="">اختر المقرر</option>` + courses.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
-
-    // restore selection if exists
-    const saved = getSelection();
-    if(saved.course){
-      courseSel.value = saved.course;
-      fillSections(saved.course);
-      if(saved.section) sectionSel.value = saved.section;
-      updateLinks();
-      pickedEl.textContent = `المقرر: ${saved.course || "-"} — الشعبة: ${saved.section || "-"}`;
-    }else{
-      sectionSel.innerHTML = `<option value="">اختر الشعبة</option>`;
-      pickedEl.textContent = "";
-    }
-
-    setStatus("");
   }
 
   function fillSections(course){
-    const sections = allRows.filter(r=>r.course===course).map(r=>r.section);
+    const sections = rows.filter(r=>r.course===course).map(r=>r.section);
     sectionSel.innerHTML = `<option value="">اختر الشعبة</option>` + sections.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
   }
 
@@ -125,52 +79,50 @@
     const sel = getSelection();
     const c = sel.course || courseSel.value || "";
     const s = sel.section || sectionSel.value || "";
+    btnAttendance.href = `attendance.html?mode=admin&course=${encodeURIComponent(c)}&section=${encodeURIComponent(s)}`;
+    btnGrades.href = `grades.html?mode=admin&course=${encodeURIComponent(c)}&section=${encodeURIComponent(s)}`;
+    btnPlan.href = `plan.html?mode=admin&course=${encodeURIComponent(c)}`;
+    btnPolicies.href = `policies.html?mode=admin&course=${encodeURIComponent(c)}`;
+  }
 
-    // ملاحظة: Grades/Attendance تعتمد على section، Plan/Policies تعتمد على course
-    btnGrades.href     = `grades.html?mode=admin&section=${encodeURIComponent(s)}&course=${encodeURIComponent(c)}`;
-    btnAttendance.href = `attendance.html?mode=admin&section=${encodeURIComponent(s)}&course=${encodeURIComponent(c)}`;
-    btnPlan.href       = `plan.html?mode=admin&course=${encodeURIComponent(c)}`;
-    btnPolicies.href   = `policies.html?mode=admin&course=${encodeURIComponent(c)}`;
+  async function loadAdminCourses(){
+    setStatus("جاري تحميل القائمة...");
+    const data = await api("admin_courses_list", {});
+    rows = (data.rows||[]).map(r=>({
+      course: (r.course||"").trim(),
+      section: (r.section||"").trim(),
+      active: String(r.active||"").toUpperCase().trim()
+    })).filter(r=>r.course && r.section && (r.active==="" || r.active==="TRUE"));
+    fillCourses();
+
+    const saved = getSelection();
+    if(saved.course){
+      courseSel.value = saved.course;
+      fillSections(saved.course);
+      if(saved.section) sectionSel.value = saved.section;
+      pickedEl.textContent = `المقرر: ${saved.course} — الشعبة: ${saved.section}`;
+    }
+    updateLinks();
+    setStatus("");
   }
 
   courseSel.addEventListener("change", ()=>{
     fillSections(courseSel.value);
-    // لا نحفظ تلقائياً حتى يضغط "تطبيق"
     updateLinks();
   });
-
-  sectionSel.addEventListener("change", ()=>{
-    updateLinks();
-  });
+  sectionSel.addEventListener("change", updateLinks);
 
   document.getElementById("applyBtn").onclick = ()=>{
     const c = courseSel.value;
     const s = sectionSel.value;
-    if(!c) { alert("اختر المقرر"); return; }
-    if(!s) { alert("اختر الشعبة"); return; }
-
+    if(!c) return alert("اختر المقرر");
+    if(!s) return alert("اختر الشعبة");
     setSelection(c,s);
     pickedEl.textContent = `المقرر: ${c} — الشعبة: ${s}`;
     updateLinks();
-    alert("تم حفظ الاختيار. الآن أي خدمة ستفتح مباشرة على نفس الشعبة.");
+    alert("تم حفظ الاختيار. الآن كل الخدمات تفتح مباشرة على نفس الشعبة.");
   };
 
-  // إضافة إلى شيت Course (نحتاج Action جديد في GAS لهذا، لكن حالياً أسهل: تضيفها يدويًا في الشيت)
-  // إذا تبغاني أخليها من الصفحة مباشرة، أعطيك Action: admin_course_add
-  document.getElementById("addBtn").onclick = async ()=>{
-    const nc = (document.getElementById("newCourse").value||"").trim();
-    const ns = (document.getElementById("newSection").value||"").trim();
-    const addMsg = document.getElementById("addMsg");
-
-    if(!nc || !ns){ addMsg.textContent="اكتب Course و Section"; return; }
-
-    addMsg.textContent = "⚠️ الإضافة من الصفحة تحتاج Action إضافي في GAS. حالياً أضفها في شيت Course يدوياً ثم اضغط تحديث.";
-  };
-
-  // expose globally in case page calls it inline
-  window.loadAdminCourses = loadAdminCourses;
-
-  // start
   loadAdminCourses().catch(e=>alert(e.message||e));
 </script>
 </body>

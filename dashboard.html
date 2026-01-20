@@ -5,70 +5,62 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>لوحة المتدرب</title>
   <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .links{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .links .btn{min-width:160px}
+    .info{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:720px){.info{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
 <div class="container">
   <div class="topbar">
     <div class="brand">لوحة المتدرب</div>
-    <div class="actions">
-      <button class="btn" onclick="logoutStudent()">خروج</button>
-    </div>
+    <div class="actions"><a class="btn" href="index.html" onclick="clearStudentSession()">خروج</a></div>
   </div>
 
   <div class="card">
     <div class="h2">بيانات المتدرب</div>
-    <div id="info" class="muted"></div>
-    <div id="courseBox" class="row" style="margin-top:10px"></div>
-  </div>
-
-  <div class="card">
-    <div class="h2">الخدمات</div>
-    <div class="row">
-      <a class="btn" href="attendance.html">سجل الحضور والغياب</a>
-      <a class="btn" href="grades.html">سجل الدرجات</a>
-      <a class="btn" href="plan.html">خطة المقرر</a>
-      <a class="btn" href="policies.html">سياسات المقرر التدريبي</a>
-      <a class="btn" href="calendar.html">التقويم</a>
-      <a class="btn" href="contact.html">التواصل مع المدرب</a>
+    <div class="info" style="margin-top:12px">
+      <div><b>الاسم:</b> <span id="stName"></span></div>
+      <div><b>الرقم التدريبي:</b> <span id="stId"></span></div>
+      <div><b>المقرر:</b> <span id="stCourse"></span></div>
+      <div><b>الشعبة:</b> <span id="stSection"></span></div>
     </div>
-  </div>
 
-  <div class="card">
-    <div class="h2">التذكيرات (حسب مقرر المتدرب)</div>
-    <div id="rems"></div>
+    <div class="links">
+      <a class="btn" href="policies.html">سياسات المقرر</a>
+      <a class="btn" href="plan.html">خطة المقرر</a>
+      <a class="btn" href="attendance.html">سجل الحضور</a>
+      <a class="btn" href="grades.html">سجل الدرجات</a>
+      <a class="btn" href="calendar.html">التقويم</a>
+      <a class="btn" href="contact.html">التواصل</a>
+    </div>
+
+    <div id="msg" class="muted" style="margin-top:12px"></div>
   </div>
 </div>
 
 <script src="assets/app.js"></script>
 <script>
-async function init(){
-  requireStudentOrAdmin();
-  if (isAdmin()){ location.href="admin-dashboard.html"; return; }
+(async function(){
+  requireStudent();
 
-  const me = await api("me", {});
-  saveSession(me);
-  const st = me.student;
+  try{
+    const me = await api("me", {});
+    const st = me.student || getStudent() || {};
 
-  info.textContent = `الاسم: ${st.name} — الرقم التدريبي: ${st.training_id} — الجوال: ${st.phone}`;
-  courseBox.innerHTML = `
-    <span class="badge">المقرر: ${esc(st.course||"-")}</span>
-    <span class="badge">الشعبة: ${esc(st.section||"-")}</span>
-  `;
+    document.getElementById("stName").textContent = st.name || "";
+    document.getElementById("stId").textContent = st.training_id || "";
+    document.getElementById("stCourse").textContent = st.course || "";
+    document.getElementById("stSection").textContent = st.section || "";
 
-  // reminders
-  const r = await api("reminders_get", {});
-  const items = r.items || [];
-  if (!items.length){ rems.innerHTML = `<div class="muted">لا توجد تذكيرات</div>`; return; }
-
-  rems.innerHTML = items.map(it=>{
-    const cls = `rem ${it.expired?'expired':''} ${it.expired?'':'red'}`;
-    return `<div class="${cls}">
-      <div><b>${esc(it.title)}</b></div>
-      <div class="muted">${esc(it.endAt)} ${it.note?("— "+esc(it.note)):""}</div>
-    </div>`;
-  }).join("");
-}
-init().catch(e=>alert(e.message||e));
+    // مهم: حفظ نسخة محلية
+    setStudentSession(getStudentToken(), st);
+  }catch(e){
+    document.getElementById("msg").textContent = "خطأ: " + (e.message || e);
+  }
+})();
 </script>
 </body>
 </html>

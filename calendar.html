@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>التقويم</title>
   <link rel="stylesheet" href="assets/style.css">
+  <style>
+    iframe{width:100%;height:80vh;border:1px solid #ddd;border-radius:12px}
+  </style>
 </head>
 <body>
 <div class="container">
@@ -14,36 +17,17 @@
   </div>
 
   <div class="card">
-    <div class="h2">التذكيرات</div>
-    <div id="rems"></div>
-  </div>
-
-  <div class="card">
-    <div class="h2">التقويم الدراسي</div>
-    <iframe id="cal" style="width:100%;height:720px;border:1px solid var(--border);border-radius:16px;"></iframe>
+    <div class="muted">إذا لم يظهر التقويم، تأكد أن رابط التقويم يسمح بالتضمين.</div>
+    <div style="margin-top:12px">
+      <iframe id="cal"></iframe>
+    </div>
   </div>
 </div>
 
-<script src="assets/app.js"></script>
 <script>
-async function init(){
-  requireStudentOrAdmin();
-  const c = await api("contact_get", {});
-  cal.src = c.calendarUrl || "https://thakir7.github.io/calendar-site/";
-
-  const r = await api("reminders_get", {});
-  const items = r.items || [];
-  if (!items.length){ rems.innerHTML = `<div class="muted">لا توجد تذكيرات</div>`; return; }
-
-  rems.innerHTML = items.map(it=>{
-    const cls = `rem ${it.expired?'expired':''} ${it.expired?'':'red'}`;
-    return `<div class="${cls}">
-      <div><b>${esc(it.title)}</b></div>
-      <div class="muted">${esc(it.endAt)} ${it.note?("— "+esc(it.note)):""}</div>
-    </div>`;
-  }).join("");
-}
-init().catch(e=>alert(e.message||e));
+  // ضع رابط التقويم الجاهز عندك:
+  const CAL_URL = "ضع_رابط_صفحة_التقويم_هنا";
+  document.getElementById("cal").src = CAL_URL;
 </script>
 </body>
 </html>
